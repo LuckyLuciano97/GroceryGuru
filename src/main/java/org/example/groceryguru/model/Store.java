@@ -9,8 +9,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 @Table(name = "stores")
 @Entity
 public class Store {
@@ -21,7 +20,6 @@ public class Store {
 
     @ManyToOne
     @JoinColumn(name = "chain_id")
-    @Column(nullable = false, unique = true, length = 100)
     private StoreChain chain;
 
     @Column(nullable = false, length = 100)
