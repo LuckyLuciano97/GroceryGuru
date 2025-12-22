@@ -11,6 +11,7 @@ import java.util.Date;
 
 @Data
 @Entity
+@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "users")
 public class User {
@@ -43,5 +44,10 @@ public class User {
         this.password = password;
         this.birthDate = birthDate;
     }
+
+
+    public User() {
+    }
+
 }
 

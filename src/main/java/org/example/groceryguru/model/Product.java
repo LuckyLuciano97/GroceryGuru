@@ -10,6 +10,8 @@ import java.util.List;
 
 @Entity
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "products")
 public class Product {
 
@@ -26,8 +28,6 @@ public class Product {
 
     @OneToMany(mappedBy = "product")
     private List<Price> prices = new ArrayList<>();
-
-
 
 
 
