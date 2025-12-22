@@ -10,5 +10,4 @@ import java.util.Optional;
 @Repository
 public interface StoreChainRepo extends JpaRepository<StoreChain, Long> {
     Optional<StoreChain> findByName(String name);
-
 }

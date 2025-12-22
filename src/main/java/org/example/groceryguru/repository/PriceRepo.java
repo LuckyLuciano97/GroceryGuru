@@ -9,9 +9,11 @@ import java.util.Optional;
 
 @Repository
 public interface PriceRepo extends JpaRepository<Price, Long> {
-    List<Price> findCurrentPricesByProductId(Long id);
-    List<Price> findByProductIdAndIsCurrentTrue(Long productId);
-    Optional<Price> findFirstByProductIdAndIsCurrentTrueOrderByPriceAsc(Long productId);
+    List<Price> findCurrentPricesByProductId(Long productId);
+    List<Price> getCurrentPricesForProducts(List<Long> productIds);
+   // Price getCheapestCurrentPriceForProduct(Long productId);
+    Price findFirstByProductIdAndIsCurrentTrueOrderByPriceAsc(Long productId);
+    List<Price> findByProductIdAndStoreIdAndIsCurrentTrue(Long productId, Long storeId);
 
 
 }
