@@ -41,7 +41,6 @@ public class ProductService {
                 .orElseThrow(() -> new EntityNotFoundException("Product not found: " + id));
 
         existing.setName(updated.getName());
-        existing.setPrices(updated.getPrices());
         existing.setDescription(updated.getDescription());
         return productRepo.save(existing);
     }
