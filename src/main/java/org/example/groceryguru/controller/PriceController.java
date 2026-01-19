@@ -45,7 +45,7 @@ public class PriceController {
 
     @PostMapping("/product/{productId}/store/{storeId}")
     public ResponseEntity<PriceResponseDto> upsertCurrentProductInStore(@PathVariable Long productId, @PathVariable Long storeId, @Valid @RequestBody PriceUpdateRequest request){
-        Price price = priceService.findByProductIdAndStoreIdAndIsCurrentTrue(productId, storeId, request.value());
+        Price price = priceService.upsertPrice(productId, storeId, request.value());
                 return ResponseEntity.ok(mapToDto(price));
     }
 
