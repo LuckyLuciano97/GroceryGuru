@@ -1,5 +1,6 @@
 package org.example.groceryguru.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.example.groceryguru.model.User;
 import org.example.groceryguru.repository.UserRepo;
 import org.springframework.stereotype.Service;
@@ -17,20 +18,42 @@ public class UserService {
         this.userRepo = userRepo;
     }
 
-    public Optional<User> findById(Long id){
-        return userRepo.findById(id);
+    public List<User> findAll() {
+        return userRepo.findAll();
     }
 
-    public Optional<User>getUserByEmail(String email){
+    public User findById(Long id) {
+        return userRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+    }
+
+    public Optional<User> getUserByEmail(String email) {
         return userRepo.getUserByEmail(email);
     }
 
-    public boolean emailExists(String email){
-        Optional<User> userOptional = userRepo.findByEmail(email);
-        if(userOptional.isPresent()){
-            return true;
+    public boolean emailExists(String email) {
+        return userRepo.findByEmail(email).isPresent();
+    }
+
+    public User createUser(User user) {
+        return userRepo.save(user);
+    }
+
+    public User updateUser(Long id, User updated) {
+        User existing = findById(id);
+        existing.setFirstName(updated.getFirstName());
+        existing.setLastName(updated.getLastName());
+        existing.setEmail(updated.getEmail());
+        existing.setPassword(updated.getPassword());
+        existing.setBirthDate(updated.getBirthDate());
+        return userRepo.save(existing);
+    }
+
+    public void deleteUser(Long id) {
+        if (!userRepo.existsById(id)) {
+            throw new EntityNotFoundException("User not found with id: " + id);
         }
-        return false;
+        userRepo.deleteById(id);
     }
 
 }
