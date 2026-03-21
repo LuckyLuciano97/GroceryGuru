@@ -1,7 +1,7 @@
 package org.example.groceryguru.controller;
 
 import jakarta.validation.Valid;
-import org.example.groceryguru.dto.ProductRequestDto;
+import org.example.groceryguru.dto.ProductRequest;
 import org.example.groceryguru.dto.ProductResponseDto;
 import org.example.groceryguru.model.Price;
 import org.example.groceryguru.model.Product;
@@ -46,7 +46,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductResponseDto> create(@Valid @RequestBody ProductRequestDto request) {
+    public ResponseEntity<ProductResponseDto> create(@Valid @RequestBody ProductRequest request) {
         Product product = new Product();
         product.setName(request.name());
         product.setDescription(request.description());
@@ -56,7 +56,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ProductResponseDto update(@PathVariable Long id, @Valid @RequestBody ProductRequestDto request) {
+    public ProductResponseDto update(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
         Product updated = new Product();
         updated.setName(request.name());
         updated.setDescription(request.description());
