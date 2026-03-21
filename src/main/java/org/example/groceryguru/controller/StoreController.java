@@ -1,7 +1,7 @@
 package org.example.groceryguru.controller;
 
 import jakarta.validation.Valid;
-import org.example.groceryguru.dto.StoreRequestDto;
+import org.example.groceryguru.dto.StoreRequest;
 import org.example.groceryguru.dto.StoreResponseDto;
 import org.example.groceryguru.model.Store;
 import org.example.groceryguru.model.StoreChain;
@@ -47,7 +47,7 @@ public class StoreController {
     }
 
     @PostMapping
-    public ResponseEntity<StoreResponseDto> create(@Valid @RequestBody StoreRequestDto request) {
+    public ResponseEntity<StoreResponseDto> create(@Valid @RequestBody StoreRequest request) {
         Store store = new Store();
         store.setName(request.name());
         store.setStreet(request.street());
@@ -68,7 +68,7 @@ public class StoreController {
     }
 
     @PutMapping("/{id}")
-    public StoreResponseDto update(@PathVariable Long id, @Valid @RequestBody StoreRequestDto request) {
+    public StoreResponseDto update(@PathVariable Long id, @Valid @RequestBody StoreRequest request) {
         Store updated = new Store();
         updated.setName(request.name());
         updated.setStreet(request.street());

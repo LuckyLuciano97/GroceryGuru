@@ -1,7 +1,7 @@
 package org.example.groceryguru.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.groceryguru.dto.ProductRequestDto;
+import org.example.groceryguru.dto.ProductRequest;
 import org.example.groceryguru.model.Product;
 import org.example.groceryguru.repository.ProductRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +36,7 @@ class ProductControllerTest {
 
     @Test
     void shouldCreateProduct() throws Exception {
-        ProductRequestDto request = new ProductRequestDto("Test Product", "Test Description");
+        ProductRequest request = new ProductRequest("Test Product", "Test Description");
 
         mockMvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -98,7 +98,7 @@ class ProductControllerTest {
         product.setName("Old Name");
         productRepo.save(product);
 
-        ProductRequestDto request = new ProductRequestDto("New Name", "New Description");
+        ProductRequest request = new ProductRequest("New Name", "New Description");
 
         mockMvc.perform(put("/api/products/" + product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -123,7 +123,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturn400WhenProductNameIsBlank() throws Exception {
-        ProductRequestDto request = new ProductRequestDto("", "Description");
+        ProductRequest request = new ProductRequest("", "Description");
 
         mockMvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)

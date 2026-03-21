@@ -35,8 +35,8 @@ public class PriceController {
         return mapToDto(price);
     }
 
-    @GetMapping("/product/{productIds}")
-    public List<PriceResponseDto> getCurrentPricesForManyProducts(@PathVariable List<Long> productIds){
+    @GetMapping("/products/batch")  // Changed from /product/{productIds}
+    public List<PriceResponseDto> getCurrentPricesForManyProducts(@RequestParam List<Long> productIds){
         return priceService.getCurrentPricesForProducts(productIds)
                 .stream()
                 .map(this::mapToDto)
