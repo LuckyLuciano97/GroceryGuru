@@ -1,0 +1,8 @@
+target/
+.git/
+.idea/
+.vscode/
+.claude/
+GroceryGuru_mobile/
+GroceryGuru_frontend/
+*.md

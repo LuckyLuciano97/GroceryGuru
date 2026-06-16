@@ -3,7 +3,10 @@ package org.example.groceryguru.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.groceryguru.dto.ProductRequest;
 import org.example.groceryguru.model.Product;
+import org.example.groceryguru.repository.PriceRepo;
 import org.example.groceryguru.repository.ProductRepo;
+import org.example.groceryguru.repository.ShoppingListItemRepo;
+import org.example.groceryguru.repository.ShoppingListRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,7 @@ import static org.hamcrest.Matchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.security.test.context.support.WithMockUser(roles = "ADMIN")
 class ProductControllerTest {
 
     @Autowired
@@ -27,10 +31,22 @@ class ProductControllerTest {
     private ProductRepo productRepo;
 
     @Autowired
+    private PriceRepo priceRepo;
+
+    @Autowired
+    private ShoppingListItemRepo shoppingListItemRepo;
+
+    @Autowired
+    private ShoppingListRepo shoppingListRepo;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
+        shoppingListItemRepo.deleteAll();
+        shoppingListRepo.deleteAll();
+        priceRepo.deleteAll();
         productRepo.deleteAll();
     }
 
@@ -88,8 +104,9 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/products/search")
                         .param("name", "milk"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Milk 1L"));
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].name").value("Milk 1L"));
     }
 
     @Test
@@ -129,6 +146,6 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.name").exists());
+                .andExpect(jsonPath("$.message.name").exists());
     }
 }

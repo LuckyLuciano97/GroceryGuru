@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -19,6 +20,32 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    /**
+     * IDOR guard: mutations on /api/users/{id} are only allowed on your own
+     * account, unless you're ADMIN. The JWT filter sets the principal to the
+     * authenticated email.
+     */
+    private void assertSelfOrAdmin(Long targetUserId) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        boolean admin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (admin) return;
+
+        String email = String.valueOf(auth.getPrincipal());
+        boolean self = userService.getUserByEmail(email)
+                .map(u -> u.getId().equals(targetUserId))
+                .orElse(false);
+        if (!self) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You can only modify your own account");
+        }
     }
 
     @GetMapping
@@ -56,6 +83,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public UserResponseDto update(@PathVariable Long id, @Valid @RequestBody UserRequestDto request) {
+        assertSelfOrAdmin(id);
         User updated = new User(
                 request.firstName(),
                 request.lastName(),
@@ -69,7 +97,36 @@ public class UserController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
+        assertSelfOrAdmin(id);
         userService.deleteUser(id);
+    }
+
+    @PutMapping("/{id}/profile")
+    public UserResponseDto updateProfile(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        assertSelfOrAdmin(id);
+        User user = userService.findById(id);
+        if (body.containsKey("firstName")) user.setFirstName(body.get("firstName"));
+        if (body.containsKey("lastName")) user.setLastName(body.get("lastName"));
+        if (body.containsKey("city")) user.setCity(body.get("city"));
+        User saved = userService.createUser(user);
+        return mapToDto(saved);
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<Void> changePassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        assertSelfOrAdmin(id);
+        userService.changePassword(id, body.get("currentPassword"), body.get("newPassword"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/city")
+    public UserResponseDto updateCity(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        assertSelfOrAdmin(id);
+        String city = body.get("city");
+        User user = userService.findById(id);
+        user.setCity(city);
+        User saved = userService.createUser(user);
+        return mapToDto(saved);
     }
 
     private UserResponseDto mapToDto(User user) {
@@ -78,7 +135,9 @@ public class UserController {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getEmail(),
-                user.getBirthDate()
+                user.getBirthDate(),
+                user.getRole(),
+                user.getCity()
         );
     }
 }

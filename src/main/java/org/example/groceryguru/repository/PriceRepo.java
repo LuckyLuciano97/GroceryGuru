@@ -14,5 +14,5 @@ public interface PriceRepo extends JpaRepository<Price, Long> {
     Price findFirstByProductIdAndIsCurrentTrueOrderByPriceAsc(Long productId);
     List<Price> findByProductIdAndStoreIdAndIsCurrentTrue(Long productId, Long storeId);
 
-
+    List<Price> findByIsCurrentTrue();
 }

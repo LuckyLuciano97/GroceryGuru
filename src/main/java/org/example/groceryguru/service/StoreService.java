@@ -48,6 +48,10 @@ public class StoreService {
         return storeRepo.save(existing);
     }
 
+    public List<String> findDistinctCities(String query) {
+        return storeRepo.findDistinctCities(query);
+    }
+
     public void deleteStore(Long id) {
         if (!storeRepo.existsById(id)) {
             throw new EntityNotFoundException("Store not found: " + id);
