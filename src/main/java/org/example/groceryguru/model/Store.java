@@ -1,5 +1,6 @@
 package org.example.groceryguru.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,13 +26,21 @@ public class Store {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(length = 50, unique = true)
+    private String storeCode;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "store")
     private List<Price> prices = new ArrayList<>();
 
     @Column
     private String street;
 
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
 
     @Column
     private String city;

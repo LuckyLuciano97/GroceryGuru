@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "GroceryGuru",
+    "slug": "GroceryGuru",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "groceryguru",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1b7a4a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.groceryguru.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1b7a4a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.groceryguru.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow GroceryGuru to access your location to find nearby stores."
+        }
+      ]
+    ]
+  }
+}

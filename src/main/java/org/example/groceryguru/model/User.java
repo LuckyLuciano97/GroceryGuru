@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 @Data
 @Entity
@@ -19,10 +18,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 100, nullable = false, unique = true)
+    @Column(length = 100, nullable = false)
     private String firstName;
 
-    @Column(length = 80, nullable = false, unique = true)
+    @Column(length = 80, nullable = false)
     private String lastName;
 
     @Column(length = 80, nullable = false, unique = true)
@@ -35,6 +34,11 @@ public class User {
     @Column
     private LocalDate birthDate;
 
+    @Column(length = 20, nullable = false)
+    private String role = "USER";
+
+    @Column(length = 100)
+    private String city;
 
     public User(String firstName, String lastName, String email, String password, LocalDate birthDate) {
         this.firstName = firstName;
@@ -42,6 +46,7 @@ public class User {
         this.email = email;
         this.password = password;
         this.birthDate = birthDate;
+        this.role = "USER";
     }
 
 

@@ -35,3 +35,14 @@ build/
 ### properties ###
 application-dev.properties
 
+### Mobile (Expo) ###
+GroceryGuru_mobile/node_modules/
+GroceryGuru_mobile/.expo/
+GroceryGuru_mobile/dist/
+
+### old web frontend, kept locally only ###
+GroceryGuru_frontend/
+
+### Claude Code ###
+.claude/
+

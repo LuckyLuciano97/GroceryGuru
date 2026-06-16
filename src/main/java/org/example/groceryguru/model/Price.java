@@ -40,6 +40,10 @@ public class Price {
     @Column(name = "is_current", nullable = false)
     private boolean isCurrent;
 
+    @Column(name = "regular_price")
+    private BigDecimal regularPrice;
 
+    @Column(name = "on_sale", nullable = false)
+    private boolean onSale = false;
 
 }

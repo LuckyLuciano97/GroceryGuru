@@ -4,6 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record ShoppingListRequest(
-        @NotBlank String name,
-        @NotNull Long userId
+        @NotBlank(message = "List name is required") String name,
+        @NotNull(message = "User ID is required") Long userId
 ) {}

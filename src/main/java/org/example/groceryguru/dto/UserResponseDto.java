@@ -7,5 +7,7 @@ public record UserResponseDto(
         String firstName,
         String lastName,
         String email,
-        LocalDate birthDate
+        LocalDate birthDate,
+        String role,
+        String city
 ) {}
