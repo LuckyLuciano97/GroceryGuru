@@ -2,15 +2,15 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearAuth } from './auth';
 
-// Physical device talks to the PC over the LAN. Must be the PC's current
-// WiFi IPv4 (run `ipconfig` / check router). Phone + PC must be on the same
-// WiFi, with NO VPN active on either (NordVPN blocks LAN traffic), and the
-// PC firewall must allow inbound TCP 8080.
-// For web (same machine) localhost works directly.
-const LAN_URL = 'http://192.168.1.220:8080';
+// Physical device reaches the PC through ngrok (bypasses LAN firewall, VPN
+// filtering, and router client-isolation). Run on the PC:
+//   ngrok http --url=ditch-cane-pamperer.ngrok-free.dev 8080
+// LAN_URL is kept as a fallback if you ever get direct LAN working.
+const NGROK_URL = 'https://ditch-cane-pamperer.ngrok-free.dev';
+// const LAN_URL = 'http://192.168.1.220:8080';
 const API_BASE_URL = Platform.select({
   web: 'http://localhost:8080/api',
-  default: `${LAN_URL}/api`,
+  default: `${NGROK_URL}/api`,
 });
 
 const api = axios.create({ baseURL: API_BASE_URL, timeout: 10000 });
