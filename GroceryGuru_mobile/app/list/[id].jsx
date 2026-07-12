@@ -109,7 +109,7 @@ export default function ListDetail() {
   useEffect(() => {
     const wsUrl = Platform.select({
       web: 'http://localhost:8080/ws',
-      default: 'http://192.168.1.220:8080/ws',
+      default: 'https://ditch-cane-pamperer.ngrok-free.dev/ws',
     });
     const client = new Client({
       webSocketFactory: () => new SockJS(wsUrl),
