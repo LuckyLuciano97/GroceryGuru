@@ -93,14 +93,39 @@ public class ProductService {
 
         // Within each relevance tier, float the closest trigram match to the top
         // (typo-tolerance), then fall back to alphabetical.
+        // Accessory demotion: Croatian names accessories "X za <thing>"
+        // ("vrč za mlijeko" = milk jug), so a name where the query follows
+        // " za " is ABOUT the product, not the product itself.
+        String accessory = "(CASE WHEN lower(" + COL + ") LIKE ? THEN 1 ELSE 0 END)";
+        String accessoryParam = "% za " + name.trim().toLowerCase() + "%";
+
+        // Head-noun boost: products whose FIRST word matches the query
+        // ("Mlijeko ...") are the product type itself - rank them first.
+        StringBuilder head = new StringBuilder("(CASE WHEN ");
+        List<Object> headParams = new ArrayList<>();
+        int h = 0;
+        for (String term : terms) {
+            if (h++ > 0) head.append(" OR ");
+            head.append("split_part(lower(").append(COL).append("), ' ', 1) LIKE ?");
+            headParams.add(term.toLowerCase() + "%");
+        }
+        head.append(" THEN 0 ELSE 1 END)");
+
+        // Rank: word-position tier -> not-an-accessory -> head-noun match ->
+        // popularity (store coverage) -> trigram similarity -> name.
         String sql = "SELECT * FROM products WHERE " + where +
                 " ORDER BY " + rank +
+                ", " + accessory +
+                ", " + head +
+                ", COALESCE(store_count, 0) DESC" +
                 ", similarity(lower(" + COL + "), lower(?)) DESC, " + COL +
                 " LIMIT ? OFFSET ?";
 
         List<Object> allParams = new ArrayList<>();
         allParams.addAll(whereParams);
         allParams.addAll(rankParams);
+        allParams.add(accessoryParam);
+        allParams.addAll(headParams);
         allParams.add(name);
         allParams.add(pageable.getPageSize());
         allParams.add(pageable.getOffset());

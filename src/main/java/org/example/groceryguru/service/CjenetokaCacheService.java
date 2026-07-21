@@ -186,12 +186,15 @@ public class CjenetokaCacheService {
         collectProducts(root, products);
         if (products.isEmpty()) return 0;
 
-        String sql = "INSERT INTO cjenoteka_products (name, image_url, barcodes, category) " +
-                     "VALUES (?, ?, ?, ?) " +
+        String sql = "INSERT INTO cjenoteka_products (name, image_url, barcodes, category, brand, amount, unit) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?) " +
                      "ON CONFLICT (image_url) DO UPDATE " +
                      "SET barcodes = array(SELECT DISTINCT unnest(" +
                      "    COALESCE(cjenoteka_products.barcodes,'{}') || " +
                      "    COALESCE(EXCLUDED.barcodes,'{}'))), " +
+                     "    brand  = COALESCE(EXCLUDED.brand,  cjenoteka_products.brand), " +
+                     "    amount = COALESCE(EXCLUDED.amount, cjenoteka_products.amount), " +
+                     "    unit   = COALESCE(EXCLUDED.unit,   cjenoteka_products.unit), " +
                      "    scraped_at = NOW()";
 
         jdbc.batchUpdate(sql, products, 500, (ps, p) -> {
@@ -205,6 +208,10 @@ public class CjenetokaCacheService {
                 ps.setNull(3, java.sql.Types.ARRAY);
             }
             ps.setString(4, term);
+            ps.setString(5, p.brand());
+            if (p.amount() != null) ps.setBigDecimal(6, java.math.BigDecimal.valueOf(p.amount()));
+            else ps.setNull(6, java.sql.Types.NUMERIC);
+            ps.setString(7, p.unit());
         });
 
         // Count actual inserts (ON CONFLICT UPDATE still returns 1, but new rows matter more)
@@ -232,7 +239,16 @@ public class CjenetokaCacheService {
                             if (!s.isBlank()) barcodes.add(s);
                         }
                     }
-                    out.add(new CjenotekaProduct(name, thumb, barcodes));
+                    String brand = node.path("brand").asText("").trim();
+                    // Prefer the standardized size; fall back to the raw one.
+                    double amount = node.path("standardized_amount").asDouble(
+                            node.path("amount").asDouble(0));
+                    String unit = node.path("standardized_unit").asText(
+                            node.path("unit").asText(""));
+                    out.add(new CjenotekaProduct(name, thumb, barcodes,
+                            brand.isBlank() ? null : brand,
+                            amount > 0 ? amount : null,
+                            unit.isBlank() ? null : unit.trim().toLowerCase()));
                 }
             }
             var it = node.fields();
@@ -274,6 +290,10 @@ public class CjenetokaCacheService {
                 category   TEXT,
                 scraped_at TIMESTAMP DEFAULT NOW()
             )""");
+        // Structured attributes used by the gated matcher (brand + size gates).
+        jdbc.execute("ALTER TABLE cjenoteka_products ADD COLUMN IF NOT EXISTS brand  TEXT");
+        jdbc.execute("ALTER TABLE cjenoteka_products ADD COLUMN IF NOT EXISTS amount NUMERIC");
+        jdbc.execute("ALTER TABLE cjenoteka_products ADD COLUMN IF NOT EXISTS unit   TEXT");
         jdbc.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm");
         jdbc.execute("CREATE INDEX IF NOT EXISTS idx_cjp_barcodes " +
                      "ON cjenoteka_products USING GIN(barcodes)");
@@ -283,5 +303,6 @@ public class CjenetokaCacheService {
     }
 
     // --- Internal record ---
-    private record CjenotekaProduct(String name, String imageUrl, List<String> barcodes) {}
+    private record CjenotekaProduct(String name, String imageUrl, List<String> barcodes,
+                                    String brand, Double amount, String unit) {}
 }

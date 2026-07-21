@@ -2,15 +2,12 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearAuth } from './auth';
 
-// Physical device reaches the PC through ngrok (bypasses LAN firewall, VPN
-// filtering, and router client-isolation). Run on the PC:
-//   ngrok http --url=ditch-cane-pamperer.ngrok-free.dev 8080
-// LAN_URL is kept as a fallback if you ever get direct LAN working.
-const NGROK_URL = 'https://ditch-cane-pamperer.ngrok-free.dev';
-// const LAN_URL = 'http://192.168.1.220:8080';
+// Deployed backend on Railway (public HTTPS) — reachable over the internet, so
+// the phone needs no LAN/VPN/ngrok. Web dev still uses a local server if running.
+const API_URL = 'https://groceryguru-production-1b67.up.railway.app';
 const API_BASE_URL = Platform.select({
-  web: 'http://localhost:8080/api',
-  default: `${NGROK_URL}/api`,
+  web: `${API_URL}/api`,
+  default: `${API_URL}/api`,
 });
 
 const api = axios.create({ baseURL: API_BASE_URL, timeout: 10000 });
