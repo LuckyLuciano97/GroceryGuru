@@ -1,7 +1,14 @@
 package org.example.groceryguru.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -15,6 +22,8 @@ import java.util.regex.Pattern;
  */
 @Service
 public class ProductNameNormalizer {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductNameNormalizer.class);
 
     /** Croatian prepositions / conjunctions that stay lowercase in titles. */
     private static final Set<String> LOWERCASE_WORDS = Set.of(
@@ -75,9 +84,38 @@ public class ProductNameNormalizer {
             Map.entry("namaz", "Namaz")
     );
 
-    /** True if this lowercase token has a curated full-word expansion. */
+    /**
+     * All truncation expansions: the corpus-mined rules from truncations.tsv,
+     * overlaid with the hand-curated ABBREVIATIONS (curated wins on conflict).
+     * Built once at class load.
+     */
+    private static final Map<String, String> EXPANSIONS = buildExpansions();
+
+    private static Map<String, String> buildExpansions() {
+        Map<String, String> map = new HashMap<>();
+        try (InputStream in = ProductNameNormalizer.class.getResourceAsStream("/truncations.tsv")) {
+            if (in != null) {
+                BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+                String line;
+                while ((line = r.readLine()) != null) {
+                    if (line.isBlank() || line.startsWith("#")) continue;
+                    int tab = line.indexOf('\t');
+                    if (tab <= 0) continue;
+                    map.put(line.substring(0, tab).trim().toLowerCase(),
+                            line.substring(tab + 1).trim());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not load truncations.tsv: {}", e.getMessage());
+        }
+        map.putAll(ABBREVIATIONS);   // hand-curated overrides corpus rules
+        log.info("Loaded {} truncation expansions", map.size());
+        return map;
+    }
+
+    /** True if this lowercase token has a full-word expansion. */
     public boolean hasExpansion(String lowerWord) {
-        return ABBREVIATIONS.containsKey(lowerWord) || BRAND_ALIASES.containsKey(lowerWord);
+        return EXPANSIONS.containsKey(lowerWord) || BRAND_ALIASES.containsKey(lowerWord);
     }
 
     /** Promo / non-essence words dropped entirely (lowercase, whole-token match). */
@@ -295,7 +333,7 @@ public class ProductNameNormalizer {
         String alias = BRAND_ALIASES.get(lower);
         if (alias != null) return alias;
 
-        String abbr = ABBREVIATIONS.get(lower);
+        String abbr = EXPANSIONS.get(lower);
         if (abbr != null) return abbr;
 
         if (UPPERCASE_TOKENS.contains(lower)) return lower.toUpperCase();
