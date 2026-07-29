@@ -81,7 +81,10 @@ public class ProductNameNormalizer {
             Map.entry("det",   "Deterdžent"),
             Map.entry("tuš",   "Tuširanje"),
             Map.entry("tus",   "Tuširanje"),
-            Map.entry("namaz", "Namaz")
+            Map.entry("namaz", "Namaz"),
+            // "s/bez Jaj" (pasta egg-ratio) is rewritten to "jajima" above before
+            // tokenizing; any bare "Jaj" left over is the noun (choc. Easter eggs).
+            Map.entry("jaj",   "Jaje")
     );
 
     /**
@@ -175,6 +178,15 @@ public class ProductNameNormalizer {
 
             // drop the "cca" (approx.) marker: "cca1,85kg" -> "1,85kg"
             working = working.replaceAll("(?i)\\bcca\\.?\\s*(?=\\d)", "");
+
+            // "s Jaj"/"bez Jaj" in pasta names is short for "with/without egg" -
+            // not the noun "jaje" - context-sensitive, so it's handled here rather
+            // than as a plain token expansion (which would also wrongly hit
+            // standalone "Jaj" on chocolate Easter-egg products). Croatian case
+            // differs by preposition: "s" takes instrumental (jajima), "bez"
+            // takes genitive (jaja).
+            working = working.replaceAll("(?i)\\bs(\\s+)jaj\\b", "s$1jajima");
+            working = working.replaceAll("(?i)\\bbez(\\s+)jaj\\b", "bez$1jaja");
 
             // merge number+unit ("400 g" -> "400g") and spelled-out Croatian units
             working = working.replaceAll(
