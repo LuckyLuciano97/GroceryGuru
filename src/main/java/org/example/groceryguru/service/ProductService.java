@@ -16,26 +16,38 @@ public class ProductService {
 
     private final ProductRepo productRepo;
     private final ProductTranslationService translationService;
+    private final ProductConceptService conceptService;
     private final JdbcTemplate jdbc;
 
-    public ProductService(ProductRepo productRepo, ProductTranslationService translationService, JdbcTemplate jdbc) {
+    public ProductService(ProductRepo productRepo, ProductTranslationService translationService,
+                          ProductConceptService conceptService, JdbcTemplate jdbc) {
         this.productRepo = productRepo;
         this.translationService = translationService;
+        this.conceptService = conceptService;
         this.jdbc = jdbc;
     }
 
     /**
-     * Ensures pg_trgm and a trigram index on display_name exist, so the search
-     * can rank by similarity (typo-tolerance) without a full table scan.
+     * Ensures the search extensions, the diacritic-folding function and the
+     * trigram indexes exist. gg_fold() strips Croatian diacritics so "cokolada"
+     * finds "Čokolada" - without it a user typing on a plain keyboard misses most
+     * of the catalog. It is declared IMMUTABLE (via the two-argument unaccent so
+     * the dictionary is pinned) so it can back an expression index.
      */
     @jakarta.annotation.PostConstruct
     void ensureSearchIndex() {
         try {
             jdbc.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_products_displayname_trgm " +
-                    "ON products USING GIN (lower(COALESCE(display_name, name)) gin_trgm_ops)");
+            jdbc.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
+            jdbc.execute("""
+                CREATE OR REPLACE FUNCTION gg_fold(txt text) RETURNS text AS
+                $$ SELECT lower(public.unaccent('public.unaccent', translate(txt, 'đĐ', 'dD'))) $$
+                LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE""");
+            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_products_fold_trgm " +
+                    "ON products USING GIN (gg_fold(COALESCE(display_name, name)) gin_trgm_ops)");
+            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_products_concept ON products(concept)");
         } catch (Exception e) {
-            // Non-fatal: search still works via ILIKE, just without the trgm index.
+            // Non-fatal: search still works, just without folding or the index.
         }
     }
 
@@ -47,86 +59,103 @@ public class ProductService {
         return productRepo.findByNameContainingIgnoreCase(name);
     }
 
+    /** Escapes LIKE wildcards so a query like "50%" is matched literally. */
+    private static String likeLiteral(String s) {
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    /**
+     * Relevance-ranked search.
+     *
+     * Everything is matched on gg_fold(), so queries work with or without Croatian
+     * diacritics ("cokolada" finds "Čokolada").
+     *
+     * Ranking is a weighted score rather than hard tiers. Hard tiers let a single
+     * lexical accident dominate: a leftover truncation carried by zero stores would
+     * win an exact-word match and outrank a staple sold in 900 stores. With a score,
+     * popularity and concept agreement can outweigh a marginally better string match.
+     *
+     * The concept term is what makes "jaja" return eggs: chocolate eggs resolve to
+     * the cokolada concept and egg-pasta to tjestenina, so both are penalised for
+     * belonging to a different concept than the query asked for.
+     */
     public Page<Product> searchProductsByName(String name, Pageable pageable) {
         Set<String> terms = translationService.expandSearch(name);
+        String queryConcept = conceptService.conceptOfQuery(name);
 
-        // Match and rank against the cleaned display_name (falling back to the
-        // raw name when absent), not the raw name. The raw name is full of store
-        // codes (e.g. a trailing "MLI"/"MIL") that otherwise match as whole words
-        // and outrank the real product. We also match the brand so brand queries
-        // work. ILIKE handles Croatian characters (Č, Š, Ž, Ć, Đ) better than LOWER().
-        final String COL = "COALESCE(display_name, name)";
+        // Folded name, and a punctuation-normalised copy padded with spaces so
+        // word matching works next to commas and dots ("Mlijeko. 0,5L").
+        final String F = "gg_fold(COALESCE(display_name, name))";
+        final String W = "(' ' || regexp_replace(" + F + ", '[^a-z0-9]+', ' ', 'g') || ' ')";
 
+        // WHERE stays on the bare folded column so the GIN trigram index applies.
         StringBuilder where = new StringBuilder("(");
         List<Object> whereParams = new ArrayList<>();
         int i = 0;
         for (String term : terms) {
-            if (i > 0) where.append(" OR ");
-            where.append(COL).append(" ILIKE ? OR brand ILIKE ?");
-            whereParams.add("%" + term + "%");
-            whereParams.add("%" + term + "%");
-            i++;
+            if (i++ > 0) where.append(" OR ");
+            where.append(F).append(" LIKE ? OR gg_fold(COALESCE(brand, '')) LIKE ?");
+            String t = "%" + likeLiteral(ProductConceptService.fold(term)) + "%";
+            whereParams.add(t);
+            whereParams.add(t);
         }
         where.append(")");
 
-        // Relevance ranking: 0 = whole-word match, 1 = starts-with, 2 = contains.
-        StringBuilder rank = new StringBuilder("CASE ");
-        List<Object> rankParams = new ArrayList<>();
-        for (String term : terms) {
-            rank.append("WHEN ").append(COL).append(" ILIKE ? OR ").append(COL)
-                .append(" ILIKE ? OR ").append(COL).append(" ILIKE ? OR ").append(COL)
-                .append(" ILIKE ? THEN 0 ");
-            rankParams.add(term);
-            rankParams.add(term + " %");
-            rankParams.add("% " + term);
-            rankParams.add("% " + term + " %");
-        }
-        for (String term : terms) {
-            rank.append("WHEN ").append(COL).append(" ILIKE ? THEN 1 ");
-            rankParams.add(term + "%");
-        }
-        for (String term : terms) {
-            rank.append("WHEN ").append(COL).append(" ILIKE ? THEN 2 ");
-            rankParams.add("% " + term + "%");
-        }
-        rank.append("ELSE 3 END");
+        StringBuilder score = new StringBuilder();
+        List<Object> scoreParams = new ArrayList<>();
 
-        // Within each relevance tier, float the closest trigram match to the top
-        // (typo-tolerance), then fall back to alphabetical.
-        // Accessory demotion: Croatian names accessories "X za <thing>"
-        // ("vrč za mlijeko" = milk jug), so a name where the query follows
-        // " za " is ABOUT the product, not the product itself.
-        String accessory = "(CASE WHEN lower(" + COL + ") LIKE ? THEN 1 ELSE 0 END)";
-        String accessoryParam = "% za " + name.trim().toLowerCase() + "%";
-
-        // Head-noun boost: products whose FIRST word matches the query
-        // ("Mlijeko ...") are the product type itself - rank them first.
-        StringBuilder head = new StringBuilder("(CASE WHEN ");
-        List<Object> headParams = new ArrayList<>();
-        int h = 0;
+        // Whole-word match: the query is a word in the name, not a fragment of one.
+        score.append("(CASE WHEN ");
+        int j = 0;
         for (String term : terms) {
-            if (h++ > 0) head.append(" OR ");
-            head.append("split_part(lower(").append(COL).append("), ' ', 1) LIKE ?");
-            headParams.add(term.toLowerCase() + "%");
+            if (j++ > 0) score.append(" OR ");
+            score.append(W).append(" LIKE ?");
+            scoreParams.add("% " + likeLiteral(ProductConceptService.fold(term)) + " %");
         }
-        head.append(" THEN 0 ELSE 1 END)");
+        score.append(" THEN 3.0 ELSE 0 END)");
 
-        // Rank: word-position tier -> not-an-accessory -> head-noun match ->
-        // popularity (store coverage) -> trigram similarity -> name.
+        // Head noun: Croatian grocery names lead with the product type.
+        score.append(" + (CASE WHEN ");
+        j = 0;
+        for (String term : terms) {
+            if (j++ > 0) score.append(" OR ");
+            score.append("split_part(btrim(").append(W).append("), ' ', 1) LIKE ?");
+            scoreParams.add(likeLiteral(ProductConceptService.fold(term)) + "%");
+        }
+        score.append(" THEN 2.0 ELSE 0 END)");
+
+        // Any word beginning with the query - partial typing still ranks.
+        score.append(" + (CASE WHEN ");
+        j = 0;
+        for (String term : terms) {
+            if (j++ > 0) score.append(" OR ");
+            score.append(W).append(" LIKE ?");
+            scoreParams.add("% " + likeLiteral(ProductConceptService.fold(term)) + "%");
+        }
+        score.append(" THEN 1.0 ELSE 0 END)");
+
+        // Concept agreement. Only applies when the query names a concept.
+        if (queryConcept != null) {
+            score.append(" + (CASE WHEN concept = ? THEN 2.5")
+                 .append(" WHEN concept IS NOT NULL THEN -2.5 ELSE 0 END)");
+            scoreParams.add(queryConcept);
+        }
+
+        // Popularity: store coverage stands in for how staple a product is.
+        // Log-scaled and capped so a huge count cannot swamp relevance outright.
+        score.append(" + 1.5 * LEAST(ln(1 + COALESCE(store_count, 0)) / ln(1000), 1.0)");
+
+        // Trigram similarity as the fine-grained tiebreaker.
+        score.append(" + 0.8 * similarity(").append(F).append(", gg_fold(?))");
+        scoreParams.add(name);
+
         String sql = "SELECT * FROM products WHERE " + where +
-                " ORDER BY " + rank +
-                ", " + accessory +
-                ", " + head +
-                ", COALESCE(store_count, 0) DESC" +
-                ", similarity(lower(" + COL + "), lower(?)) DESC, " + COL +
+                " ORDER BY (" + score + ") DESC, COALESCE(store_count, 0) DESC, " + F +
                 " LIMIT ? OFFSET ?";
 
         List<Object> allParams = new ArrayList<>();
         allParams.addAll(whereParams);
-        allParams.addAll(rankParams);
-        allParams.add(accessoryParam);
-        allParams.addAll(headParams);
-        allParams.add(name);
+        allParams.addAll(scoreParams);
         allParams.add(pageable.getPageSize());
         allParams.add(pageable.getOffset());
 
@@ -144,10 +173,11 @@ public class ProductService {
             return p;
         }, allParams.toArray());
 
-        String countSql = "SELECT COUNT(*) FROM products WHERE " + where;
-        Long total = jdbc.queryForObject(countSql, Long.class, whereParams.toArray());
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM products WHERE " + where,
+                Long.class, whereParams.toArray());
         return new PageImpl<>(products, pageable, total != null ? total : 0);
     }
+
 
     public Product getProductById(Long id){
         return productRepo.findById(id)
