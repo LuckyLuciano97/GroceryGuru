@@ -23,6 +23,7 @@ public class ShoppingListService {
     private final JdbcTemplate jdbc;
     private final ListNotificationService notifier;
     private final ProductTranslationService translationService;
+    private final ProductConceptService conceptService;
 
     public ShoppingListService(ShoppingListRepo shoppingListRepo,
                                ShoppingListItemRepo shoppingListItemRepo,
@@ -32,7 +33,8 @@ public class ShoppingListService {
                                PriceRepo priceRepo,
                                JdbcTemplate jdbc,
                                ListNotificationService notifier,
-                               ProductTranslationService translationService) {
+                               ProductTranslationService translationService,
+                               ProductConceptService conceptService) {
         this.shoppingListRepo = shoppingListRepo;
         this.shoppingListItemRepo = shoppingListItemRepo;
         this.memberRepo = memberRepo;
@@ -42,6 +44,7 @@ public class ShoppingListService {
         this.jdbc = jdbc;
         this.notifier = notifier;
         this.translationService = translationService;
+        this.conceptService = conceptService;
     }
 
     public List<ShoppingList> getListsForUser(Long userId) {
@@ -209,7 +212,7 @@ public class ShoppingListService {
             }
             StringBuilder gSql = new StringBuilder(
                 "SELECT sc.name AS chain_name, p.id AS product_id, p.name AS product_name, " +
-                "p.net_quantity, p.unit, MIN(pr.price) AS min_price " +
+                "p.net_quantity, p.unit, p.concept, MIN(pr.price) AS min_price " +
                 "FROM prices pr " +
                 "JOIN stores s ON s.id = pr.store_id " +
                 "JOIN store_chains sc ON sc.id = s.chain_id " +
@@ -223,7 +226,7 @@ public class ShoppingListService {
                 gParams.add(city);
             }
 
-            gSql.append(" GROUP BY sc.name, p.id, p.name, p.net_quantity, p.unit");
+            gSql.append(" GROUP BY sc.name, p.id, p.name, p.net_quantity, p.unit, p.concept");
 
             // Fetch all matches, then rank in Java by relevance + unit price
             List<RawGenericRow> rows = new ArrayList<>();
@@ -234,6 +237,7 @@ public class ShoppingListService {
                     rs.getString("product_name"),
                     rs.getString("net_quantity"),
                     rs.getString("unit"),
+                    rs.getString("concept"),
                     rs.getBigDecimal("min_price")
                 ));
             }, gParams.toArray());
@@ -242,6 +246,7 @@ public class ShoppingListService {
             // Score each unique product - strongly prefer products available at MORE chains
             // so the same product is compared across stores
             String termLower = term.toLowerCase();
+            String queryConcept = conceptService.conceptOfQuery(term);
             Map<Long, Double> productScores = new HashMap<>();
             Map<Long, String> productNameMap = new HashMap<>();
             Map<Long, Set<String>> productChains = new HashMap<>();
@@ -266,7 +271,15 @@ public class ShoppingListService {
                 int chainCount = productChains.get(row.productId).size();
                 int coveragePenalty = totalChains - chainCount; // 0 if available everywhere
 
-                double score = coveragePenalty * 100_000_000.0
+                // Wrong-category products must never win, however cheap or widely
+                // stocked. Term expansion adds English synonyms and matches them as
+                // substrings, so "mlijeko" reaches MILKA chocolate and "jaja" reaches
+                // parmigiano REGGiano; coverage weighting then promoted them.
+                int conceptPenalty = (queryConcept != null && row.concept != null
+                        && !queryConcept.equals(row.concept)) ? 1 : 0;
+
+                double score = conceptPenalty * 1_000_000_000.0
+                    + coveragePenalty * 100_000_000.0
                     + relevance * 10_000_000.0
                     + sizePreference * 1_000_000.0
                     + unitPrice;
@@ -651,7 +664,7 @@ public class ShoppingListService {
     private record GenericMatch(Long productId, String productName, BigDecimal price) {}
 
     private record RawGenericRow(String chainName, Long productId, String productName,
-                                 String netQuantity, String unit, BigDecimal price) {}
+                                 String netQuantity, String unit, String concept, BigDecimal price) {}
 
     /**
      * Checks if a product has a "standard" size for its type.

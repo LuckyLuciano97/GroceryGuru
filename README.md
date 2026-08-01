@@ -3,6 +3,10 @@
 **[Live demo](https://groceryguru-production-1b67.up.railway.app)** ·
 [API docs](https://groceryguru-production-1b67.up.railway.app/swagger-ui/index.html)
 
+Hit "Try the demo" on the login screen to go straight in, or sign in with
+`demo@gg.test` / `demo1234`. It works in a phone browser too, so you can add it
+to your home screen and use it like an app.
+
 Grocery price comparison app for Croatia. Croatian stores are required to publish
 their prices daily, so this project pulls those datasets (around 20 chains), cleans
 them up and lets you build a shopping list and find out which store near you is
@@ -24,29 +28,32 @@ at needing five different store apps to compare prices.
 
 ## Search
 
-The interesting problem here turned out to be search. The feeds give you truncated
-ALL-CAPS names (`MLIJ`, `TJEST`, `S JAJ`), so plain string matching ranks badly:
-searching `jaja` (eggs) returned chocolate Easter eggs and egg pasta, and `mlij`
-returned a milk jug before the milk.
+Search ended up being most of the work. The feeds hand you truncated ALL-CAPS names
+(`MLIJ`, `TJEST`, `S JAJ`), so matching on the raw strings ranks terribly. Searching
+`jaja` (eggs) gave me chocolate Easter eggs and egg pasta, and `mlij` put a milk jug
+above the actual milk.
 
-Three things fix it:
+The first fix was diacritics. Nobody types `čokolada` with the diacritics on a
+regular keyboard, and `cokolada` was only finding 845 of the 3302 chocolate products
+while `đumbir` (ginger) returned nothing at all unless you typed the đ. Everything
+now goes through a `gg_fold()` function, which is just `unaccent` pinned to a
+dictionary so it stays IMMUTABLE and can back a GIN trigram index.
 
-- **Diacritic folding.** Croatian keyboards are not a given, so everything is
-  matched through `gg_fold()` (an IMMUTABLE `unaccent` wrapper, backed by a GIN
-  trigram index on the folded expression). `cokolada` used to find 845 of 3302
-  chocolate products, and `dumbir` found none at all.
-- **Concepts.** Each product resolves to a canonical concept from its head noun
-  (Croatian grocery names lead with the product type), with override rules for
-  names that lead with one type but are another - `Cokoladna Jaja Oreo` resolves
-  to `cokolada`, egg pasta to `tjestenina`. Rules live in `concepts.tsv`.
-- **A weighted score instead of ranking tiers.** Hard tiers let one lexical
-  accident dominate: a leftover truncation stocked by zero stores beat a staple
-  sold in 900. Scoring lets popularity and concept agreement outweigh a
-  marginally better string match.
+That still didn't help with `jaja`, because "chocolate eggs" really does contain the
+word eggs. So each product resolves to a concept, taken from the first word - in
+Croatian product names that's almost always the product type - with override rules
+for the ones that lead with one thing and are another. `Cokoladna Jaja Oreo` ends up
+under `cokolada`, egg pasta under `tjestenina`. The rules are in `concepts.tsv`.
 
-Truncations are expanded from `truncations.tsv`, mined from the corpus and filtered
-against a Croatian word list so real words are never "expanded" (`repa` is beet, not
-`repair`; `hren` is horseradish, not `hrenovke`).
+Ranking used to be a fixed order of tiers, which turned out to be the reason a
+leftover truncation stocked in zero stores could beat a staple sold in 900 - it won
+on an exact word match and nothing else got a say. It's a weighted score now, so
+popularity and the concept matching can outweigh a slightly better string match.
+
+The truncations themselves come from `truncations.tsv`, mined out of the corpus and
+then filtered against a Croatian word list, because the naive version wanted to
+"expand" real words - `repa` is beet, not `repair`, and `hren` is horseradish, which
+is not the same thing as `hrenovke`.
 
 ## Stack
 

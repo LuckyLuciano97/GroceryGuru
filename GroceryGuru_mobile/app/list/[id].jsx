@@ -301,16 +301,22 @@ export default function ListDetail() {
   const completeResults = results ? results.filter((r) => r.complete) : [];
   const partialResults = results ? results.filter((r) => !r.complete) : [];
 
-  // ═══ STORE CHECKLIST VIEW ═══
+  // Store checklist view
   if (selectedStore) {
     const allChecked = selectedStore.items.every((_, i) => checkedShop[i]);
 
-    // Savings vs the most expensive complete store (only meaningful for the cheapest)
-    const maxComplete = completeResults.length
-      ? Math.max(...completeResults.map((r) => r.totalPrice)) : null;
-    const savings = maxComplete && maxComplete > selectedStore.totalPrice
+    // Savings are only claimed for the cheapest basket, measured against the
+    // priciest one. Showing them for any selected store implied you had saved
+    // money by picking a store that was not actually the cheapest.
+    const completeTotals = completeResults.map((r) => r.totalPrice);
+    const maxComplete = completeTotals.length ? Math.max(...completeTotals) : null;
+    const minComplete = completeTotals.length ? Math.min(...completeTotals) : null;
+    const isCheapest = minComplete != null && selectedStore.totalPrice <= minComplete;
+    const savings = isCheapest && maxComplete && maxComplete > selectedStore.totalPrice
       ? maxComplete - selectedStore.totalPrice : 0;
     const savingsPct = savings && maxComplete ? Math.round((savings / maxComplete) * 100) : 0;
+    const extraVsCheapest = !isCheapest && minComplete != null
+      ? selectedStore.totalPrice - minComplete : 0;
     const storeUrl = getChainUrl(selectedStore.chainName);
 
     return (
@@ -343,6 +349,12 @@ export default function ListDetail() {
               {savings > 0 ? (
                 <Text style={styles.heroSave}>
                   {t('youllSave')} <Text style={styles.heroSaveAmt}>{savings.toFixed(2)} EUR ({savingsPct}%)</Text>
+                  <Text style={styles.heroSaveNote}> {t('vsPriciestStore')}</Text>
+                </Text>
+              ) : extraVsCheapest > 0 ? (
+                <Text style={styles.heroSave}>
+                  <Text style={styles.heroSaveAmt}>+{extraVsCheapest.toFixed(2)} EUR</Text>
+                  <Text style={styles.heroSaveNote}> {t('moreThanCheapest')}</Text>
                 </Text>
               ) : (
                 selectedStore._storeName ? <Text style={styles.heroMetaSub} numberOfLines={1}>{selectedStore._storeName}</Text> : null
@@ -441,7 +453,7 @@ export default function ListDetail() {
     );
   }
 
-  // ═══ MAIN LIST VIEW ═══
+  // Main list view
   return (
     <View style={styles.container}>
       <Stack.Screen options={{
@@ -856,6 +868,7 @@ const styles = StyleSheet.create({
   heroTopRow: { flexDirection: 'row', alignItems: 'center' },
   heroLogoBox: { backgroundColor: '#fff', borderRadius: 12, padding: 6 },
   heroChain: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  heroSaveNote: { fontSize: 12, color: '#dfe3ff', fontWeight: '400' },
   heroSave: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 2 },
   heroSaveAmt: { color: '#7CF0AE', fontWeight: '800' },
   heroMetaSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },

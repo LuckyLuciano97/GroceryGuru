@@ -5,6 +5,10 @@ import { authService, formatApiError } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { useI18n } from '../services/i18n';
 
+// Shared read-only-ish account so the deployed demo can be tried without signing up.
+const DEMO_EMAIL = 'demo@gg.test';
+const DEMO_PASSWORD = 'demo1234';
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,6 +17,22 @@ export default function Login() {
   const { login } = useAuth();
   const router = useRouter();
   const { t } = useI18n();
+
+  const signIn = async (mail, pass) => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await authService.login(mail, pass);
+      await login(res.data.token, res.data.user);
+      router.replace('/(tabs)/lists');
+    } catch (err) {
+      setError(formatApiError(err, t('invalidCredentials')));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemo = () => signIn(DEMO_EMAIL, DEMO_PASSWORD);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -62,6 +82,11 @@ export default function Login() {
           <Text style={styles.btnText}>{loading ? t('loggingIn') : t('login')}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={[styles.demoBtn, loading && styles.btnDisabled]} onPress={handleDemo} disabled={loading}>
+          <Text style={styles.demoBtnText}>{t('tryDemo')}</Text>
+        </TouchableOpacity>
+        <Text style={styles.demoHint}>{t('tryDemoHint')}</Text>
+
         <TouchableOpacity onPress={() => router.push('/register')}>
           <Text style={styles.link}>{t('noAccount')} <Text style={styles.linkBold}>{t('register')}</Text></Text>
         </TouchableOpacity>
@@ -71,6 +96,9 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
+  demoBtn: { borderWidth: 2, borderColor: '#5B4FE8', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  demoBtnText: { color: '#5B4FE8', fontSize: 16, fontWeight: '700' },
+  demoHint: { textAlign: 'center', marginTop: 8, color: '#888', fontSize: 12 },
   container: { flex: 1, backgroundColor: '#fff' },
   inner: { flex: 1, justifyContent: 'center', padding: 24 },
   title: { fontSize: 32, fontWeight: 'bold', color: '#1E2A78', textAlign: 'center', marginBottom: 4 },
