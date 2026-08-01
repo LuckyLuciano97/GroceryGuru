@@ -53,7 +53,7 @@ H	vodka	vodka|votka
 H	gin	gin
 H	napitak	napitak|napitci
 H	energetski	energetski
-H	cokolada	cokolada|cokoladni|cokoladno|cokoladna
+H	cokolada	cokolada|cokoladni|cokoladno|cokoladna|cok|coko|cokolade
 H	bomboni	bombon|bomboni|zele|gumeni
 H	sladoled	sladoled|sladoledi
 H	cips	cips|chips|flips|smoki
@@ -141,3 +141,4 @@ O	cokolada	cokolad|uskrsn|figuric|zeko|bunny|praline|kinder|zaini|sorini|rocher|
 O	dekoracija	dekor|ukras|stiropor|drveni|led|loptic|dinosaur|plast	jaja
 O	pribor	vrc|casa|bocic|zagrijac|posuda|drzac|kutija|kalup	mlijeko|jaja|sir|kava|caj|vino|pivo
 O	igracke	igracka|plis|slagalica|puzzle	
+O	cokolada	cok jaja|cok jaje|cok. jaja|cok. jaje|cokoladna jaja|cokoladno jaje|cokolada jaja|cokolada jaje|kinder jaje|kinder jaja|uskrsno jaje|uskrsna jaja	

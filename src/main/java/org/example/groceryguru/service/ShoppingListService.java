@@ -275,8 +275,12 @@ public class ShoppingListService {
                 // stocked. Term expansion adds English synonyms and matches them as
                 // substrings, so "mlijeko" reaches MILKA chocolate and "jaja" reaches
                 // parmigiano REGGiano; coverage weighting then promoted them.
-                int conceptPenalty = (queryConcept != null && row.concept != null
-                        && !queryConcept.equals(row.concept)) ? 1 : 0;
+                // An unclassified product ranks between the two: it might be right,
+                // but a product known to be the requested type should beat it.
+                int conceptPenalty = 0;
+                if (queryConcept != null && !queryConcept.equals(row.concept)) {
+                    conceptPenalty = row.concept == null ? 1 : 2;
+                }
 
                 double score = conceptPenalty * 1_000_000_000.0
                     + coveragePenalty * 100_000_000.0
