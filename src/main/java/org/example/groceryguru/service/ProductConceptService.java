@@ -2,6 +2,7 @@ package org.example.groceryguru.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -11,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -42,8 +44,42 @@ public class ProductConceptService {
 
     private static final Pattern HEAD = Pattern.compile("[^a-z]*([a-z]{3,})");
 
-    public ProductConceptService() {
+    private final JdbcTemplate jdbc;
+
+    public ProductConceptService(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
         load();
+    }
+
+    /**
+     * Recomputes the concept column. Ingestion writes raw rows, so this runs
+     * after an import the same way the other name-maintenance passes do.
+     * Only rows whose concept actually changes are written.
+     */
+    public Map<String, Object> assignConcepts(boolean apply) {
+        jdbc.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS concept text");
+
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, COALESCE(display_name, name) AS n, concept FROM products");
+
+        List<Object[]> changes = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            String resolved = conceptOfName((String) r.get("n"));
+            if (!java.util.Objects.equals(resolved, r.get("concept"))) {
+                changes.add(new Object[]{resolved, (Number) r.get("id")});
+            }
+        }
+        if (apply && !changes.isEmpty()) {
+            jdbc.batchUpdate("UPDATE products SET concept = ? WHERE id = ?", changes);
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("applied", apply);
+        out.put("scanned", rows.size());
+        out.put("changed", changes.size());
+        out.put("classified", jdbc.queryForObject(
+                "SELECT COUNT(*) FROM products WHERE concept IS NOT NULL", Long.class));
+        return out;
     }
 
     private void load() {

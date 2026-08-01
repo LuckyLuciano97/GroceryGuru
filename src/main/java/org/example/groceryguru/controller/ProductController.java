@@ -7,6 +7,7 @@ import org.example.groceryguru.model.Price;
 import org.example.groceryguru.model.Product;
 import org.example.groceryguru.service.CjenetokaCacheService;
 import org.example.groceryguru.service.LocalImageMatcherService;
+import org.example.groceryguru.service.ProductConceptService;
 import org.example.groceryguru.service.ProductImageService;
 import org.example.groceryguru.service.ProductNameNormalizer;
 import org.example.groceryguru.service.ProductService;
@@ -41,6 +42,7 @@ public class ProductController {
     private final org.example.groceryguru.service.CanonicalNamingService canonicalNamingService;
     private final org.example.groceryguru.service.ReadabilityService readabilityService;
     private final JdbcTemplate jdbc;
+    private final ProductConceptService conceptService;
 
     public ProductController(ProductService productService, PriceRepo priceRepo,
                              ProductImageService productImageService,
@@ -49,7 +51,7 @@ public class ProductController {
                              ProductNameNormalizer nameNormalizer,
                              org.example.groceryguru.service.EncodingRepairService encodingRepairService,
                              org.example.groceryguru.service.CanonicalNamingService canonicalNamingService,
-                             org.example.groceryguru.service.ReadabilityService readabilityService,
+                             org.example.groceryguru.service.ReadabilityService readabilityService, ProductConceptService conceptService,
                              JdbcTemplate jdbc) {
         this.productService = productService;
         this.priceRepo = priceRepo;
@@ -61,6 +63,7 @@ public class ProductController {
         this.canonicalNamingService = canonicalNamingService;
         this.readabilityService = readabilityService;
         this.jdbc = jdbc;
+        this.conceptService = conceptService;
     }
 
     /**
@@ -73,6 +76,17 @@ public class ProductController {
             @RequestParam(defaultValue = "5") int maxWords,
             @RequestParam(defaultValue = "40") int limit) {
         return readabilityService.improve(apply, maxWords, limit);
+    }
+
+    /**
+     * Recomputes the canonical concept per product (the signal that makes a
+     * search for "jaja" return eggs rather than chocolate eggs). Run after an
+     * ingestion. Dry-run by default; pass ?apply=true to write.
+     */
+    @GetMapping("/assign-concepts")
+    public Map<String, Object> assignConcepts(
+            @RequestParam(defaultValue = "false") boolean apply) {
+        return conceptService.assignConcepts(apply);
     }
 
     /**

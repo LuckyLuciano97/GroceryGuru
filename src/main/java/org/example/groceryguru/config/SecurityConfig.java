@@ -71,6 +71,7 @@ public class SecurityConfig {
                         "/api/products/repair-encoding",
                         "/api/products/unify-names",
                         "/api/products/improve-readability",
+                        "/api/products/assign-concepts",
                         "/api/products/fix-encoding").hasRole("ADMIN")
                 // read-only diagnostics
                 .requestMatchers(HttpMethod.GET,
