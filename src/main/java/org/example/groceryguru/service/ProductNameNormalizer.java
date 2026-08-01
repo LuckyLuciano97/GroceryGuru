@@ -188,6 +188,16 @@ public class ProductNameNormalizer {
             working = working.replaceAll("(?i)\\bs(\\s+)jaj\\b", "s$1jajima");
             working = working.replaceAll("(?i)\\bbez(\\s+)jaj\\b", "bez$1jaja");
 
+            // "Mlije" is cut from either the noun (mlijeko) or the adjective
+            // (mliječna/mliječni), and the adjective inflects for gender, so it
+            // is only expanded where it is unambiguously the noun: leading the
+            // name, or following a milk-type modifier. "Praline Mlije Čokolada"
+            // is left alone rather than turned into "Praline Mlijeko Čokolada".
+            working = working.replaceAll("(?i)^mlije\\b", "Mlijeko");
+            working = working.replaceAll(
+                    "(?i)\\b(kozje|kokosovo|bademovo|sojino|zobeno|rižino|kravlje)(\\s+)mlije\\b",
+                    "$1$2mlijeko");
+
             // merge number+unit ("400 g" -> "400g") and spelled-out Croatian units
             working = working.replaceAll(
                     "(?i)(\\d+[.,]?\\d*)\\s*(grama|gram)\\b", "$1g");
