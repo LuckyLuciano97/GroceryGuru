@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { authService } from '../services/api';
+import { authService, formatApiError } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { useI18n } from '../services/i18n';
 
@@ -17,7 +17,16 @@ export default function Register() {
   const { t } = useI18n();
 
   const handleRegister = async () => {
-    if (!firstName.trim() || !email.trim() || !password) return;
+    // Every field is required by the API, so check them all here - returning
+    // silently would just look like the button is dead.
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
+      setError(t('allFieldsRequired'));
+      return;
+    }
+    if (password.length < 8) {
+      setError(t('passwordTooShort'));
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -30,8 +39,7 @@ export default function Register() {
       await login(res.data.token, res.data.user);
       router.replace('/(tabs)/lists');
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.email || t('registrationFailed');
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      setError(formatApiError(err, t('registrationFailed')));
     } finally {
       setLoading(false);
     }

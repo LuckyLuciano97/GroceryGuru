@@ -4,10 +4,9 @@
 [API docs](https://groceryguru-production-1b67.up.railway.app/swagger-ui/index.html)
 
 Grocery price comparison app for Croatia. Croatian stores are required to publish
-their prices daily, so this project pulls those datasets (around 20 chains via
-[cijene.dev](https://api.cijene.dev), plus a few store sites directly), cleans them
-up and lets you build a shopping list and find out which store near you is cheapest
-for the whole basket.
+their prices daily, so this project pulls those datasets (around 20 chains), cleans
+them up and lets you build a shopping list and find out which store near you is
+cheapest for the whole basket.
 
 I built this to learn Spring Boot properly and because I was genuinely annoyed
 at needing five different store apps to compare prices.
@@ -67,9 +66,9 @@ then:
 ```
 
 The schema is created by Hibernate on first start. To get data in, register a user,
-set its role to ADMIN in the db, and call `POST /api/admin/ingestion/cijene-api/run`
-with the token. That downloads and imports the latest daily archive (takes a few
-minutes). Swagger UI is at `/swagger-ui/index.html`.
+set its role to ADMIN in the db, and trigger an ingestion run from
+`/api/admin/ingestion` with the token. That downloads and imports the latest daily
+archive (takes a few minutes). Swagger UI is at `/swagger-ui/index.html`.
 
 Mobile app:
 

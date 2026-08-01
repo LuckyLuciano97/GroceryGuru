@@ -7,6 +7,7 @@ import org.example.groceryguru.service.ProductNameNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,9 @@ public class PriceIngestionService {
     private final List<StoreIngestionStrategy> strategies;
     private final StoreChainRepo storeChainRepo;
     private final JdbcTemplate jdbc;
+
+    @Value("${ingestion.enabled:true}")
+    private boolean ingestionEnabled;
     private final GeocodingService geocodingService;
     private final ProductNameNormalizer nameNormalizer;
 
@@ -42,10 +46,25 @@ public class PriceIngestionService {
         this.nameNormalizer = nameNormalizer;
     }
 
+    /**
+     * Refreshes prices on a schedule. Weekly in production: a full run rewrites
+     * roughly 1.8M price rows, which is more than the deployment wants to do
+     * nightly, and published prices do not move enough to justify it.
+     * Set ingestion.enabled=false to stop it without a redeploy.
+     */
     @Scheduled(cron = "${ingestion.cron:0 0 8 * * *}")
     public void scheduledIngestion() {
+        if (!ingestionEnabled) {
+            log.info("Scheduled price ingestion is disabled");
+            return;
+        }
         log.info("Starting scheduled price ingestion");
-        ingestAll();
+        try {
+            ingestAll();
+        } catch (Exception e) {
+            // never let a failed run kill the scheduler thread
+            log.error("Scheduled price ingestion failed", e);
+        }
     }
 
     public IngestionResult ingestAll() {

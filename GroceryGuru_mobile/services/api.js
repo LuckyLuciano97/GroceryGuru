@@ -28,6 +28,26 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Turns an API error into something worth showing a user. Bean Validation
+ * failures arrive as an object keyed by field ({lastName: "...", password: "..."}),
+ * which stringifies into raw JSON if passed straight to the UI.
+ */
+export function formatApiError(err, fallback) {
+  if (!err.response) {
+    // no response at all - the request never landed
+    return err.code === 'ECONNABORTED' ? 'Request timed out. Please try again.' : fallback;
+  }
+  const data = err.response.data || {};
+  const msg = data.message ?? data.error;
+  if (typeof msg === 'string' && msg.trim()) return msg;
+  if (msg && typeof msg === 'object') {
+    const parts = Object.values(msg).filter((v) => typeof v === 'string');
+    if (parts.length) return parts.join('\n');
+  }
+  return fallback;
+}
+
 export const authService = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (data) => api.post('/auth/register', data),

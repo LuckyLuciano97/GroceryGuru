@@ -16,6 +16,8 @@ export default {
   lastName: 'Prezime',
   invalidCredentials: 'Neispravni email ili lozinka.',
   registrationFailed: 'Registracija neuspjela.',
+  allFieldsRequired: 'Molimo ispunite sva polja.',
+  passwordTooShort: 'Lozinka mora imati najmanje 8 znakova.',
   noAccount: 'Nemate račun?',
   haveAccount: 'Već imate račun?',
 

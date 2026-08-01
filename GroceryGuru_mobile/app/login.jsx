@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { authService } from '../services/api';
+import { authService, formatApiError } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 import { useI18n } from '../services/i18n';
 
@@ -15,7 +15,10 @@ export default function Login() {
   const { t } = useI18n();
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password) {
+      setError(t('allFieldsRequired'));
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -23,7 +26,7 @@ export default function Login() {
       await login(res.data.token, res.data.user);
       router.replace('/(tabs)/lists');
     } catch (err) {
-      setError(err.response?.data?.message || t('invalidCredentials'));
+      setError(formatApiError(err, t('invalidCredentials')));
     } finally {
       setLoading(false);
     }

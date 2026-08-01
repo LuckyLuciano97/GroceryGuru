@@ -16,6 +16,8 @@ export default {
   lastName: 'Last Name',
   invalidCredentials: 'Invalid email or password.',
   registrationFailed: 'Registration failed.',
+  allFieldsRequired: 'Please fill in all fields.',
+  passwordTooShort: 'Password must be at least 8 characters.',
   noAccount: "Don't have an account?",
   haveAccount: 'Already have an account?',
 
