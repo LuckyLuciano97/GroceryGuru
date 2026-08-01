@@ -85,7 +85,9 @@ npm install
 npx expo start
 ```
 
-Point `services/api.js` at your machine's LAN IP if you run it on a real phone.
+`services/api.js` points at the deployed Railway backend, so the app runs on a
+phone without any LAN or tunnel setup. Change it to your machine's LAN IP if you
+want it talking to a local server instead.
 
 Tests run against an in-memory H2 database, so they don't need Postgres:
 

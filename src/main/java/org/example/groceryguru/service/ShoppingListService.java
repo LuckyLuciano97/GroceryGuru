@@ -252,9 +252,11 @@ public class ShoppingListService {
             Map<Long, Set<String>> productChains = new HashMap<>();
 
             // First pass: collect which chains carry each product
+            Map<Long, String> productConceptMap = new HashMap<>();
             for (RawGenericRow row : rows) {
                 productChains.computeIfAbsent(row.productId, k -> new HashSet<>()).add(row.chainName);
                 productNameMap.put(row.productId, row.productName);
+                if (row.concept != null) productConceptMap.put(row.productId, row.concept);
             }
 
             int totalChains = (int) rows.stream().map(r -> r.chainName).distinct().count();
@@ -314,14 +316,19 @@ public class ShoppingListService {
                 String chain = chainEntry.getKey();
                 Map<Long, BigDecimal> availableProducts = chainEntry.getValue();
 
-                // Walk through ranked products, pick first available at this chain
+                // Walk through ranked products, pick first available at this chain.
+                // A product known to be a different category is skipped outright:
+                // reporting the item as missing here is honest, whereas quietly
+                // substituting parmigiano for eggs makes the basket total a lie
+                // and lets a chain that stocks neither win the comparison.
                 for (Map.Entry<Long, Double> ranked : rankedProducts) {
                     Long pid = ranked.getKey();
                     BigDecimal price = availableProducts.get(pid);
-                    if (price != null) {
-                        chainBest.put(chain, new GenericMatch(pid, productNameMap.get(pid), price));
-                        break;
-                    }
+                    if (price == null) continue;
+                    String pConcept = productConceptMap.get(pid);
+                    if (queryConcept != null && pConcept != null && !queryConcept.equals(pConcept)) continue;
+                    chainBest.put(chain, new GenericMatch(pid, productNameMap.get(pid), price));
+                    break;
                 }
             }
 
