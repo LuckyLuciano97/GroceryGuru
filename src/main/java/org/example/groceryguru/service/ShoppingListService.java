@@ -211,7 +211,8 @@ public class ShoppingListService {
                 gParams.add("%" + t + "%");
             }
             StringBuilder gSql = new StringBuilder(
-                "SELECT sc.name AS chain_name, p.id AS product_id, p.name AS product_name, " +
+                "SELECT sc.name AS chain_name, p.id AS product_id, "
+                + "COALESCE(p.display_name, p.name) AS product_name, " +
                 "p.net_quantity, p.unit, p.concept, MIN(pr.price) AS min_price " +
                 "FROM prices pr " +
                 "JOIN stores s ON s.id = pr.store_id " +
@@ -226,7 +227,7 @@ public class ShoppingListService {
                 gParams.add(city);
             }
 
-            gSql.append(" GROUP BY sc.name, p.id, p.name, p.net_quantity, p.unit, p.concept");
+            gSql.append(" GROUP BY sc.name, p.id, p.display_name, p.name, p.net_quantity, p.unit, p.concept");
 
             // Fetch all matches, then rank in Java by relevance + unit price
             List<RawGenericRow> rows = new ArrayList<>();
@@ -518,7 +519,7 @@ public class ShoppingListService {
 
         List<Object> params = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-            "SELECT p.id AS product_id, p.name AS product_name, MIN(pr.price) AS min_price "
+            "SELECT p.id AS product_id, COALESCE(p.display_name, p.name) AS product_name, MIN(pr.price) AS min_price "
         );
 
         sql.append("FROM prices pr " +
@@ -575,7 +576,7 @@ public class ShoppingListService {
             params.add(city);
         }
 
-        sql.append(" GROUP BY p.id, p.name ORDER BY min_price ASC LIMIT 15");
+        sql.append(" GROUP BY p.id, p.display_name, p.name ORDER BY min_price ASC LIMIT 15");
 
         List<ItemPriceDetail> alternatives = new ArrayList<>();
         jdbc.query(sql.toString(), rs -> {
@@ -645,7 +646,8 @@ public class ShoppingListService {
         for (Long id : candidates) ids.add(id.toString());
         List<Object> params = new ArrayList<>();
         StringBuilder inner = new StringBuilder(
-            "SELECT sc.name AS chain, p.id AS product_id, p.name AS product_name, " +
+            "SELECT sc.name AS chain, p.id AS product_id, "
+                + "COALESCE(p.display_name, p.name) AS product_name, " +
             "MIN(pr.price) AS price, " +
             "ROW_NUMBER() OVER (PARTITION BY sc.name ORDER BY MIN(pr.price) ASC) AS rn " +
             "FROM prices pr " +
@@ -657,7 +659,7 @@ public class ShoppingListService {
             inner.append("AND UPPER(s.city) = UPPER(?) ");
             params.add(city);
         }
-        inner.append("GROUP BY sc.name, p.id, p.name");
+        inner.append("GROUP BY sc.name, p.id, p.display_name, p.name");
 
         String sql = "SELECT chain, product_id, product_name, price FROM (" + inner +
                 ") t WHERE rn = 1";
