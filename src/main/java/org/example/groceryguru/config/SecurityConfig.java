@@ -44,6 +44,15 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
 
+                // the exported Expo web build, served from src/main/resources/static
+                .requestMatchers(HttpMethod.GET,
+                        "/", "/index.html", "/favicon.ico", "/metadata.json",
+                        "/_expo/**", "/assets/**").permitAll()
+                // client-side routes: no file backs them, SpaController forwards
+                // them to index.html and the router takes over in the browser
+                .requestMatchers(HttpMethod.GET,
+                        "/login", "/register", "/list/**", "/(tabs)/**").permitAll()
+
                 // maintenance endpoints (scraping, cache builds, bulk rewrites):
                 // GETs for convenience but they mutate state, so ADMIN only;
                 // must come before the broad GET permitAll (first match wins)
