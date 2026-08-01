@@ -131,7 +131,18 @@ public class ProductConceptService {
                 if (f.contains(p)) return o.concept();
             }
         }
-        return headWords.get(head);
+        String byHead = headWords.get(head);
+        if (byHead != null) return byHead;
+
+        // Display names are normalised brand-first ("Marodi Tijesto Rezanci"),
+        // so the leading word is often a brand and carries no concept. Fall back
+        // to the first later word that does, rather than giving up.
+        for (String tok : f.split("[^a-z]+")) {
+            if (tok.length() < 3) continue;
+            String c = headWords.get(tok);
+            if (c != null) return c;
+        }
+        return null;
     }
 
     /**
