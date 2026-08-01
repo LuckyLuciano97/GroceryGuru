@@ -114,7 +114,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(allowedOrigins.split("\\s*,\\s*")));
-        config.setAllowedOriginPatterns(List.of("https://*.ngrok-free.app", "https://*.ngrok.io"));
+        // The deployment serves the web build from its own origin, and browsers
+        // still send Origin on same-origin POSTs - so without the deployed host
+        // listed here every login and registration is rejected before it reaches
+        // the controller, while curl (which sends no Origin) succeeds.
+        config.setAllowedOriginPatterns(List.of(
+                "https://*.up.railway.app",
+                "https://*.ngrok-free.app", "https://*.ngrok.io"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
