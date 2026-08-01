@@ -116,3 +116,16 @@ export const locationService = {
     return degrees * (Math.PI / 180);
   },
 };
+
+/**
+ * Opens a store in whatever map app the platform provides. react-native-maps
+ * has no web build, so the embedded map is native-only; this link works
+ * everywhere and is the only way to see a location from a browser.
+ */
+export function mapsUrlFor({ latitude, longitude, name, city }) {
+  if (latitude != null && longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+  }
+  const q = encodeURIComponent([name, city].filter(Boolean).join(' '));
+  return `https://www.google.com/maps/search/?api=1&query=${q}`;
+}

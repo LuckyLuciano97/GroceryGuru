@@ -19,6 +19,7 @@ export default {
   allFieldsRequired: 'Please fill in all fields.',
   vsPriciestStore: 'vs the priciest store',
   tryDemo: 'Try the demo',
+  findOnMap: 'Find this store on the map',
   tryDemoHint: 'Opens a sample account with a ready-made shopping list.',
   moreThanCheapest: 'more than the cheapest store',
   passwordTooShort: 'Password must be at least 8 characters.',

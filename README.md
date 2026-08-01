@@ -3,9 +3,25 @@
 **[Live demo](https://groceryguru-production-1b67.up.railway.app)** ·
 [API docs](https://groceryguru-production-1b67.up.railway.app/swagger-ui/index.html)
 
-Hit "Try the demo" on the login screen to go straight in, or sign in with
-`demo@gg.test` / `demo1234`. It works in a phone browser too, so you can add it
-to your home screen and use it like an app.
+## Try it in 30 seconds
+
+1. Open the [live demo](https://groceryguru-production-1b67.up.railway.app) and press
+   **Try the demo** (or sign in with `demo@gg.test` / `demo1234`).
+2. Open the list called **Recruiter demo basket**.
+3. Press **Find Cheapest Store**.
+
+You get every chain ranked by what the whole basket costs there, cheapest first,
+and the chains that don't stock everything listed separately as partial matches.
+Tap the cheapest one for a shopping checklist, how much you save against the
+priciest chain, and a link to find that store on a map.
+
+To add your own items, type what you want in plain Croatian - `mlijeko`, `kruh`,
+`jaja` - and it picks the cheapest matching product at each chain for you. Press
+**Share this list** to invite another registered user; the list then syncs between
+you both live.
+
+Works in a phone browser, so you can add it to your home screen and use it like an
+app - no install needed.
 
 Grocery price comparison app for Croatia. Croatian stores are required to publish
 their prices daily, so this project pulls those datasets (around 20 chains), cleans
@@ -17,9 +33,11 @@ at needing five different store apps to compare prices.
 
 ## What it does
 
-- Search ~100k products with current prices across chains (Konzum, Lidl, Plodine, Kaufland...)
+- Search ~165k products with current prices across chains (Konzum, Lidl, Plodine, Kaufland...)
 - Shopping lists with live sync between devices (WebSocket) and sharing with other users
-- "Find cheapest store" - optimizes your whole list against nearby stores, with geolocation
+- "Find cheapest store" - ranks every chain by what your whole basket costs there, and
+  says which chains are missing items rather than substituting something else
+- Nearby stores by distance, with a map on the phone build and map links on the web
 - Cheaper alternative suggestions per item
 - Product images matched via PostgreSQL pg_trgm trigram similarity against a locally
   cached index, plus barcode matching where available

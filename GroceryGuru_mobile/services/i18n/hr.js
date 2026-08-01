@@ -19,6 +19,7 @@ export default {
   allFieldsRequired: 'Molimo ispunite sva polja.',
   vsPriciestStore: 'u odnosu na najskuplju trgovinu',
   tryDemo: 'Isprobaj demo',
+  findOnMap: 'Pronađi trgovinu na karti',
   tryDemoHint: 'Otvara demo račun s pripremljenim popisom za kupnju.',
   moreThanCheapest: 'više nego najjeftinija trgovina',
   passwordTooShort: 'Lozinka mora imati najmanje 8 znakova.',

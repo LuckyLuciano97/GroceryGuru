@@ -6,6 +6,7 @@ import { shoppingListService, productService, storeService } from '../../service
 import { useAuth } from '../../services/AuthContext';
 import { getCategoryIcon } from '../../services/categories';
 import { getChainLogo, getChainColor, getChainInitial, getChainUrl } from '../../services/chains';
+import { mapsUrlFor } from '../../services/location';
 import { colors } from '../../services/theme';
 import { locationService } from '../../services/location';
 import { useI18n } from '../../services/i18n';
@@ -440,6 +441,17 @@ export default function ListDetail() {
             </View>
           )}
 
+          <TouchableOpacity
+            style={styles.findStoreBtn}
+            onPress={() => Linking.openURL(mapsUrlFor({
+              name: selectedStore._storeName || selectedStore.chainName,
+              city: selectedStore.city,
+            }))}
+          >
+            <Ionicons name="location-outline" size={18} color="#5B4FE8" />
+            <Text style={styles.findStoreBtnText}>{t('findOnMap')}</Text>
+          </TouchableOpacity>
+
           {storeUrl && (
             <TouchableOpacity style={styles.viewStoreBtn} onPress={() => Linking.openURL(storeUrl)}>
               <Text style={styles.viewStoreBtnText}>{t('viewInStore')}</Text>
@@ -872,6 +884,8 @@ const styles = StyleSheet.create({
   heroSave: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 2 },
   heroSaveAmt: { color: '#7CF0AE', fontWeight: '800' },
   heroMetaSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
+  findStoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: '#5B4FE8', borderRadius: 10, paddingVertical: 13, marginHorizontal: 16, marginTop: 14 },
+  findStoreBtnText: { color: '#5B4FE8', fontSize: 15, fontWeight: '700' },
   heroMeta: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 },
   heroPill: { backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 8 },
   heroPillText: { color: '#1f9d55', fontSize: 16, fontWeight: '800' },

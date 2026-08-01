@@ -57,7 +57,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="stores"
         options={{
-          href: null,
+          title: t('nearbyStores'),
+          tabBarIcon: ({ color, size }) => <Ionicons name="location-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { locationService } from '../../services/location';
+import { locationService, mapsUrlFor } from '../../services/location';
 import { storeService } from '../../services/api';
 
 // Conditionally import react-native-maps (not available on web)
@@ -272,6 +272,9 @@ function StoreListItem({ store }) {
         {store.minPrice && (
           <Text style={styles.minPrice}>From €{store.minPrice.toFixed(2)}</Text>
         )}
+        <TouchableOpacity onPress={() => Linking.openURL(mapsUrlFor(store))}>
+          <Text style={styles.mapLink}>Open in maps</Text>
+        </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.directionBtn}>
         <Ionicons name="navigate" size={22} color="#5B4FE8" />
@@ -374,6 +377,7 @@ const styles = StyleSheet.create({
   storeInfo: { flex: 1 },
   storeNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   storeName: { fontSize: 14, fontWeight: '600', color: '#333', flex: 1 },
+  mapLink: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginTop: 6 },
   distance: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginLeft: 8 },
 
   storeDetails: { marginVertical: 4 },
