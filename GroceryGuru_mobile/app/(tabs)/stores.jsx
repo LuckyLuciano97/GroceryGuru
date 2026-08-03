@@ -17,6 +17,11 @@ if (Platform.OS !== 'web') {
   }
 }
 
+// Every store in the dataset is in Croatia, so a visitor located anywhere else
+// resolves their real position and sees an empty list. Falling back to the city
+// centre keeps the screen useful instead of permanently empty.
+const FALLBACK = { latitude: 45.815, longitude: 15.9819, label: 'Zagreb' };
+
 export default function StoresScreen() {
   const [location, setLocation] = useState(null);
   const [stores, setStores] = useState([]);
@@ -25,6 +30,7 @@ export default function StoresScreen() {
   const [radius, setRadius] = useState(25);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [error, setError] = useState(null);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   // Request location permission on mount
   useEffect(() => {
@@ -37,7 +43,7 @@ export default function StoresScreen() {
     if (hasPermission) {
       fetchCurrentLocation();
     } else {
-      Alert.alert('Permission Denied', 'Location permission is required to find nearby stores.');
+      useFallbackLocation();
     }
   };
 
@@ -50,21 +56,32 @@ export default function StoresScreen() {
         setLocation(coords);
         fetchNearbyStores(coords);
       } else {
-        setError('Could not get your location. Please try again.');
-        Alert.alert('Location Error', 'Could not get your location. Please ensure location services are enabled.');
+        useFallbackLocation();
       }
     } catch (err) {
-      setError(err.message);
-      Alert.alert('Error', 'Failed to get location: ' + err.message);
+      useFallbackLocation();
     } finally {
       setLoading(false);
     }
   };
 
+  /** Centres on Zagreb when the real position is unavailable or out of range. */
+  const useFallbackLocation = async () => {
+    setUsingFallback(true);
+    setError(null);
+    setLocation(FALLBACK);
+    await fetchNearbyStores(FALLBACK);
+  };
+
   const fetchNearbyStores = async (coords) => {
     try {
       const response = await storeService.getNearbyStores(coords.latitude, coords.longitude, radius);
-      setStores(response.data);
+      const found = response.data || [];
+      if (found.length === 0 && !usingFallback) {
+        await useFallbackLocation();
+        return;
+      }
+      setStores(found);
     } catch (err) {
       console.error('Error fetching stores:', err);
       setError('Failed to load nearby stores');
@@ -181,6 +198,11 @@ export default function StoresScreen() {
 
   return (
     <View style={styles.container}>
+      {usingFallback && (
+        <Text style={styles.fallbackNote}>
+          Showing stores near {FALLBACK.label} - the price data only covers Croatia.
+        </Text>
+      )}
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Nearby Stores</Text>
@@ -377,6 +399,7 @@ const styles = StyleSheet.create({
   storeInfo: { flex: 1 },
   storeNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   storeName: { fontSize: 14, fontWeight: '600', color: '#333', flex: 1 },
+  fallbackNote: { backgroundColor: '#eef0ff', color: '#3b3f9e', fontSize: 12, paddingHorizontal: 16, paddingVertical: 9, textAlign: 'center' },
   mapLink: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginTop: 6 },
   distance: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginLeft: 8 },
 
