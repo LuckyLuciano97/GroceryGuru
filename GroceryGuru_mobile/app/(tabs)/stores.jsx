@@ -26,6 +26,29 @@ const FALLBACK = { latitude: 45.815, longitude: 15.9819, label: 'Zagreb' };
 /** The API returns every store in range; a long list is unreadable on a phone. */
 const VISIBLE_LIMIT = 20;
 
+/**
+ * Stores are geocoded to the city, not the street - 52 Spar branches in Zagreb
+ * all carry the same coordinate - so listing them separately produced a dozen
+ * identical rows at the same distance. Branches that cannot be told apart are
+ * collapsed into one row that says how many there are.
+ */
+function collapseBranches(list) {
+  const byPlace = new Map();
+  for (const s of list) {
+    const key = `${s.name}|${s.latitude}|${s.longitude}`;
+    const seen = byPlace.get(key);
+    if (seen) {
+      seen.branchCount += 1;
+      if (s.minPrice != null && (seen.minPrice == null || s.minPrice < seen.minPrice)) {
+        seen.minPrice = s.minPrice;
+      }
+    } else {
+      byPlace.set(key, { ...s, branchCount: 1 });
+    }
+  }
+  return [...byPlace.values()];
+}
+
 export default function StoresScreen() {
   const [location, setLocation] = useState(null);
   const [stores, setStores] = useState([]);
@@ -85,7 +108,7 @@ export default function StoresScreen() {
         await useFallbackLocation();
         return;
       }
-      setStores(found);
+      setStores(collapseBranches(found));
     } catch (err) {
       console.error('Error fetching stores:', err);
       setError('Failed to load nearby stores');
@@ -289,6 +312,9 @@ function StoreListItem({ store }) {
           </Text>
           <Text style={styles.distance}>{store.distanceKm.toFixed(1)} km</Text>
         </View>
+        {store.branchCount > 1 && (
+          <Text style={styles.branches}>{store.branchCount} branches in this area</Text>
+        )}
         <View style={styles.storeDetails}>
           <Text style={styles.chainName}>{store.chainName || 'Unknown Chain'}</Text>
           {store.opensAt && store.closesAt && (
@@ -390,6 +416,7 @@ const styles = StyleSheet.create({
   storeInfo: { flex: 1 },
   storeNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   storeName: { fontSize: 14, fontWeight: '600', color: '#333', flex: 1 },
+  branches: { fontSize: 12, color: '#888', marginTop: 2 },
   resultCount: { fontSize: 12, color: '#777', paddingHorizontal: 16, paddingBottom: 8 },
   fallbackNote: { backgroundColor: '#eef0ff', color: '#3b3f9e', fontSize: 12, paddingHorizontal: 16, paddingVertical: 9, textAlign: 'center' },
   mapLink: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginTop: 6 },
