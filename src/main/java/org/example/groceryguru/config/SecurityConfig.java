@@ -4,6 +4,7 @@ import org.example.groceryguru.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -48,10 +49,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                         "/", "/index.html", "/favicon.ico", "/metadata.json",
                         "/_expo/**", "/assets/**").permitAll()
-                // client-side routes: no file backs them, SpaController forwards
-                // them to index.html and the router takes over in the browser
-                .requestMatchers(HttpMethod.GET,
-                        "/login", "/register", "/list/**", "/(tabs)/**").permitAll()
+                // Client-side routes: no file backs them, SpaController forwards
+                // them to index.html. Matched by exclusion because listing them
+                // missed every tab route (/lists, /cards, /profile, /stores),
+                // which 403'd on refresh. The lookahead keeps /api and the other
+                // reserved prefixes on their own rules.
+                .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET,
+                        "^/(?!api/|ws/|actuator/|swagger-ui/|v3/|_expo/|assets/).*$")).permitAll()
 
                 // maintenance endpoints (scraping, cache builds, bulk rewrites):
                 // GETs for convenience but they mutate state, so ADMIN only;
