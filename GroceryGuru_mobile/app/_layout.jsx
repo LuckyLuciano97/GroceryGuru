@@ -2,10 +2,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../services/AuthContext';
 import { I18nProvider } from '../services/i18n';
-import { installDesktopFrame } from '../services/desktopFrame';
-
-// Runs at module scope so the frame is in place before the first paint.
-installDesktopFrame();
 
 export default function RootLayout() {
   return (
