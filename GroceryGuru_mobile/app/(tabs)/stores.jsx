@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, Style
 import { Ionicons } from '@expo/vector-icons';
 import { locationService, mapsUrlFor } from '../../services/location';
 import { storeService } from '../../services/api';
+import RadiusSlider from '../../components/RadiusSlider';
 
 // Conditionally import react-native-maps (not available on web)
 let MapView = null;
@@ -22,12 +23,15 @@ if (Platform.OS !== 'web') {
 // centre keeps the screen useful instead of permanently empty.
 const FALLBACK = { latitude: 45.815, longitude: 15.9819, label: 'Zagreb' };
 
+/** The API returns every store in range; a long list is unreadable on a phone. */
+const VISIBLE_LIMIT = 20;
+
 export default function StoresScreen() {
   const [location, setLocation] = useState(null);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const [radius, setRadius] = useState(25);
+  const [radius, setRadius] = useState(5);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [error, setError] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -73,9 +77,9 @@ export default function StoresScreen() {
     await fetchNearbyStores(FALLBACK);
   };
 
-  const fetchNearbyStores = async (coords) => {
+  const fetchNearbyStores = async (coords, withRadius) => {
     try {
-      const response = await storeService.getNearbyStores(coords.latitude, coords.longitude, radius);
+      const response = await storeService.getNearbyStores(coords.latitude, coords.longitude, withRadius ?? radius);
       const found = response.data || [];
       if (found.length === 0 && !usingFallback) {
         await useFallbackLocation();
@@ -89,10 +93,15 @@ export default function StoresScreen() {
     }
   };
 
-  const handleRadiusChange = (increment) => {
-    const newRadius = radius + increment;
-    if (newRadius >= 5 && newRadius <= 50) {
-      setRadius(newRadius);
+  /** Refetch once, on release - dragging alone must not hit the API. */
+  const handleRadiusCommit = async (committed) => {
+    setRadius(committed);
+    if (!location) return;
+    setLoading(true);
+    try {
+      await fetchNearbyStores(location, committed);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -186,7 +195,7 @@ export default function StoresScreen() {
 
     return (
       <FlatList
-        data={stores}
+        data={stores.slice(0, VISIBLE_LIMIT)}
         keyExtractor={(item) => `${item.id}`}
         renderItem={({ item }) => <StoreListItem store={item} />}
         contentContainerStyle={styles.listContent}
@@ -223,31 +232,28 @@ export default function StoresScreen() {
           <Text style={styles.locationBtnText}>Find Nearby</Text>
         </TouchableOpacity>
 
-        <View style={styles.radiusControl}>
-          <TouchableOpacity
-            style={styles.radiusBtn}
-            onPress={() => handleRadiusChange(-5)}
-            disabled={radius <= 5 || loading}
-          >
-            <Text style={styles.radiusBtnText}>−</Text>
-          </TouchableOpacity>
-          <View style={styles.radiusDisplay}>
-            <Text style={styles.radiusValue}>{radius}</Text>
-            <Text style={styles.radiusUnit}>km</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.radiusBtn}
-            onPress={() => handleRadiusChange(5)}
-            disabled={radius >= 50 || loading}
-          >
-            <Text style={styles.radiusBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
+
 
         <TouchableOpacity style={styles.refreshBtn} onPress={handleRefresh} disabled={loading || !location}>
           <Ionicons name="refresh" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <RadiusSlider
+        value={radius}
+        min={1}
+        max={50}
+        onChange={setRadius}
+        onCommit={handleRadiusCommit}
+      />
+
+      {stores.length > 0 && (
+        <Text style={styles.resultCount}>
+          {stores.length > VISIBLE_LIMIT
+            ? `Nearest ${VISIBLE_LIMIT} of ${stores.length} stores within ${radius} km`
+            : `${stores.length} ${stores.length === 1 ? 'store' : 'stores'} within ${radius} km`}
+        </Text>
+      )}
 
       {/* Main content - toggleable */}
       {viewMode === 'map' ? (
@@ -346,21 +352,6 @@ const styles = StyleSheet.create({
   },
   locationBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  radiusControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  radiusBtn: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9' },
-  radiusBtnText: { fontSize: 18, fontWeight: '700', color: '#333' },
-  radiusDisplay: { paddingHorizontal: 10, alignItems: 'center' },
-  radiusValue: { fontSize: 16, fontWeight: '700', color: '#333' },
-  radiusUnit: { fontSize: 11, color: '#888' },
-
   refreshBtn: {
     width: 36,
     height: 36,
@@ -399,6 +390,7 @@ const styles = StyleSheet.create({
   storeInfo: { flex: 1 },
   storeNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   storeName: { fontSize: 14, fontWeight: '600', color: '#333', flex: 1 },
+  resultCount: { fontSize: 12, color: '#777', paddingHorizontal: 16, paddingBottom: 8 },
   fallbackNote: { backgroundColor: '#eef0ff', color: '#3b3f9e', fontSize: 12, paddingHorizontal: 16, paddingVertical: 9, textAlign: 'center' },
   mapLink: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginTop: 6 },
   distance: { fontSize: 13, fontWeight: '700', color: '#5B4FE8', marginLeft: 8 },
