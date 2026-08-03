@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { shoppingListService } from '../../services/api';
 import { useAuth } from '../../services/AuthContext';
 import { useI18n } from '../../services/i18n';
+import { confirm, notify } from '../../services/dialog';
 
 export default function Lists() {
   const { user } = useAuth();
@@ -34,25 +35,24 @@ export default function Lists() {
       setNewName('');
       fetchLists();
     } catch (err) {
-      Alert.alert(t('error'), t('failedToCreate'));
+      notify(t('error'), t('failedToCreate'));
     }
   };
 
   const handleDelete = (listId, name) => {
-    Alert.alert(t('deleteList'), t('deleteListConfirm').replace('{name}', name), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('delete'), style: 'destructive',
-        onPress: async () => {
-          try {
-            await shoppingListService.deleteList(listId);
-            fetchLists();
-          } catch (err) {
-            Alert.alert(t('error'), t('failedToDelete'));
-          }
-        },
+    confirm(
+      t('deleteList'),
+      t('deleteListConfirm').replace('{name}', name),
+      async () => {
+        try {
+          await shoppingListService.deleteList(listId);
+          fetchLists();
+        } catch (err) {
+          notify(t('error'), t('failedToDelete'));
+        }
       },
-    ]);
+      { confirmLabel: t('delete'), cancelLabel: t('cancel'), destructive: true }
+    );
   };
 
   const renderItem = ({ item }) => {

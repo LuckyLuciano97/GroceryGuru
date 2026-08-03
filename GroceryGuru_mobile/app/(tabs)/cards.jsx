@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import { confirm, notify } from '../../services/dialog';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../../services/i18n';
@@ -102,20 +103,19 @@ export default function CardsScreen() {
       await loyaltyCardService.add(pickChain, number.trim());
       setAdding(false); setPickChain(null); setNumber('');
       setLoading(true); await load();
-    } catch { Alert.alert(t('error') || 'Error', t('failedToAdd') || 'Could not add card'); }
+    } catch { notify(t('error') || 'Error', t('failedToAdd') || 'Could not add card'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = (card) => {
-    Alert.alert(card.chain, '', [
-      { text: t('cancel') || 'Cancel', style: 'cancel' },
-      {
-        text: t('remove') || 'Remove', style: 'destructive',
-        onPress: async () => {
-          try { await loyaltyCardService.remove(card.id); load(); } catch { /* ignore */ }
-        },
+    confirm(
+      card.chain,
+      '',
+      async () => {
+        try { await loyaltyCardService.remove(card.id); load(); } catch { /* ignore */ }
       },
-    ]);
+      { confirmLabel: t('remove') || 'Remove', cancelLabel: t('cancel') || 'Cancel', destructive: true }
+    );
   };
 
   if (loading) {

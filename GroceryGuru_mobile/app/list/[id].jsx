@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { confirm, notify } from '../../services/dialog';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ScrollView, ActivityIndicator, Platform, Image, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -144,7 +145,7 @@ export default function ListDetail() {
       await shoppingListService.shareList(id, shareEmail.trim(), user.id);
       setShareEmail('');
       setShareOpen(false);
-      Alert.alert(t('success'), t('sharedSuccess'));
+      notify(t('success'), t('sharedSuccess'));
     } catch (err) {
       setShareError(err.response?.data?.error || 'Failed to share list');
     }
@@ -154,7 +155,7 @@ export default function ListDetail() {
     try {
       await shoppingListService.removeMember(id, memberId, user.id);
       fetchMembers();
-    } catch { Alert.alert(t('error'), t('failedToRemove')); }
+    } catch { notify(t('error'), t('failedToRemove')); }
   };
 
   const isOwner = list?.user?.id === user?.id;
@@ -178,7 +179,7 @@ export default function ListDetail() {
       await shoppingListService.addGenericItem(id, searchQuery.trim(), 1);
       setSearchQuery(''); setSearchResults([]); setResults(null);
       fetchList();
-    } catch (err) { Alert.alert(t('error'), t('failedToAdd')); }
+    } catch (err) { notify(t('error'), t('failedToAdd')); }
   };
 
   const addSpecific = async (productId) => {
@@ -186,7 +187,7 @@ export default function ListDetail() {
       await shoppingListService.addItem(id, productId, 1);
       setSearchQuery(''); setSearchResults([]); setResults(null);
       fetchList();
-    } catch (err) { Alert.alert(t('error'), t('failedToAdd')); }
+    } catch (err) { notify(t('error'), t('failedToAdd')); }
   };
 
   const removeItem = async (itemId) => {
@@ -194,7 +195,7 @@ export default function ListDetail() {
       await shoppingListService.removeItem(itemId);
       setResults(null);
       fetchList();
-    } catch (err) { Alert.alert(t('error'), t('failedToRemove')); }
+    } catch (err) { notify(t('error'), t('failedToRemove')); }
   };
 
   const changeQty = async (itemId, newQty) => {
@@ -259,7 +260,7 @@ export default function ListDetail() {
       } catch (locErr) {
         console.log('Could not fetch nearby stores:', locErr.message);
       }
-    } catch (err) { Alert.alert(t('error'), t('optimizationFailed')); }
+    } catch (err) { notify(t('error'), t('optimizationFailed')); }
     finally { setOptimizing(false); }
   };
 

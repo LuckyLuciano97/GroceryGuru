@@ -5,6 +5,7 @@ import { useAuth } from '../../services/AuthContext';
 import { userService } from '../../services/api';
 import { useI18n } from '../../services/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { confirm, notify } from '../../services/dialog';
 
 export default function Profile() {
   const { user, logout, updateUser } = useAuth();
@@ -27,7 +28,7 @@ export default function Profile() {
 
   const handleSaveProfile = async () => {
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert(t('error'), t('nameRequired'));
+      notify(t('error'), t('nameRequired'));
       return;
     }
     setSaving(true);
@@ -39,9 +40,9 @@ export default function Profile() {
       });
       await updateUser({ ...user, firstName: firstName.trim(), lastName: lastName.trim(), city: city.trim() || null });
       setEditing(false);
-      Alert.alert(t('success'), t('profileUpdated'));
+      notify(t('success'), t('profileUpdated'));
     } catch (err) {
-      Alert.alert(t('error'), t('failedToUpdate'));
+      notify(t('error'), t('failedToUpdate'));
     } finally {
       setSaving(false);
     }
@@ -49,11 +50,11 @@ export default function Profile() {
 
   const handleChangePassword = async () => {
     if (newPw.length < 8) {
-      Alert.alert(t('error'), t('passwordMinLength'));
+      notify(t('error'), t('passwordMinLength'));
       return;
     }
     if (newPw !== confirmPw) {
-      Alert.alert(t('error'), t('passwordsDontMatch'));
+      notify(t('error'), t('passwordsDontMatch'));
       return;
     }
     setSavingPw(true);
@@ -63,42 +64,38 @@ export default function Profile() {
       setCurrentPw('');
       setNewPw('');
       setConfirmPw('');
-      Alert.alert(t('success'), t('passwordChanged'));
+      notify(t('success'), t('passwordChanged'));
     } catch (err) {
-      Alert.alert(t('error'), err.response?.status === 400 ? t('incorrectPassword') : t('failedToChangePassword'));
+      notify(t('error'), err.response?.status === 400 ? t('incorrectPassword') : t('failedToChangePassword'));
     } finally {
       setSavingPw(false);
     }
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    confirm(
       t('deleteAccount'),
       t('deleteAccountWarning'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('deleteForever'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await userService.deleteAccount(user.id);
-              await logout();
-              router.replace('/login');
-            } catch (err) {
-              Alert.alert(t('error'), t('failedToDeleteAccount'));
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await userService.deleteAccount(user.id);
+          await logout();
+          router.replace('/login');
+        } catch (err) {
+          notify(t('error'), t('failedToDeleteAccount'));
+        }
+      },
+      { confirmLabel: t('deleteForever'), cancelLabel: t('cancel'), destructive: true }
     );
   };
 
   const handleLogout = () => {
-    Alert.alert(t('logout'), t('logoutConfirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('logout'), style: 'destructive', onPress: async () => { await logout(); router.replace('/login'); } },
-    ]);
+    confirm(
+      t('logout'),
+      t('logoutConfirm'),
+      async () => { await logout(); router.replace('/login'); },
+      { confirmLabel: t('logout'), cancelLabel: t('cancel'), destructive: true }
+    );
   };
 
   return (

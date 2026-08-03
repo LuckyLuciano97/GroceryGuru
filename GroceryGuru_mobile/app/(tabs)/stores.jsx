@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { confirm, notify } from '../../services/dialog';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { locationService, mapsUrlFor } from '../../services/location';
@@ -112,7 +113,7 @@ export default function StoresScreen() {
     } catch (err) {
       console.error('Error fetching stores:', err);
       setError('Failed to load nearby stores');
-      Alert.alert('Error', 'Failed to load nearby stores: ' + err.message);
+      notify('Error', 'Failed to load nearby stores: ' + err.message);
     }
   };
 
