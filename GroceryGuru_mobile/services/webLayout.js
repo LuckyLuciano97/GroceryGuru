@@ -13,6 +13,13 @@ import { Platform } from 'react-native';
  */
 const CSS = `
   @media (min-width: 700px) {
+    /* The gradient sits on body, which is height:100% - at fractional viewport
+       heights (Windows 125% display scaling) rounding leaves a strip below body
+       where the page canvas shows through white. Painting html dark makes any
+       such strip invisible. */
+    html {
+      background: #0f1332;
+    }
     body {
       background:
         radial-gradient(1100px 560px at 15% 8%, #2b3a9e 0%, transparent 60%),
