@@ -2,6 +2,10 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../services/AuthContext';
 import { I18nProvider } from '../services/i18n';
+import { installWebLayout } from '../services/webLayout';
+
+// Module scope so the styles are in place before the first paint.
+installWebLayout();
 
 export default function RootLayout() {
   return (
