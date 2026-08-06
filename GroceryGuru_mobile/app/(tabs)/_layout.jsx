@@ -2,7 +2,7 @@ import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../services/AuthContext';
 import { useI18n } from '../../services/i18n';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { colors } from '../../services/theme';
 
 export default function TabsLayout() {
@@ -32,11 +32,21 @@ export default function TabsLayout() {
           backgroundColor: colors.bg,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 6,
+          // Web sizing is exact: the item contributes 10px of its own padding
+          // and a fixed 28px icon block, and the label needs 14px - the label
+          // is the flexible child, so any shortfall crushes it first. The old
+          // 62/6/8 left it 9px tall, which is why the labels rendered cut off.
+          // Native keeps the taller bar for the phone gesture area.
+          height: Platform.OS === 'web' ? 60 : 62,
+          paddingBottom: Platform.OS === 'web' ? 3 : 8,
+          paddingTop: Platform.OS === 'web' ? 3 : 6,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          // explicit so the flex squeeze can't shrink the text box
+          ...(Platform.OS === 'web' ? { lineHeight: 14 } : null),
+        },
       }}
     >
       <Tabs.Screen
